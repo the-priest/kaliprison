@@ -307,6 +307,73 @@ IMPORTANT:
   Document every action with timestamps.
   Assume you may testify about this in court.
   Chain of custody for all evidence.`,
+
+  "google_dorking.txt": `GOOGLE DORKING — SEARCH OPERATORS
+═══════════════════════════════════════════
+site:target.machine          pages on one domain
+filetype:pdf site:target     find documents
+intitle:"index of"           open directory listings
+inurl:admin                  admin panels in the URL
+intext:"password"            pages mentioning passwords
+cache:target.machine         Google's cached copy
+-www site:target             subdomains other than www
+
+CHAINING:
+  site:target.machine filetype:xls intext:password
+  site:target.machine inurl:login
+
+Recon is mostly reading. Find what's already public before you touch anything.`,
+
+  "osint_notes.txt": `OSINT — OPEN SOURCE INTELLIGENCE
+═══════════════════════════════════════════
+PEOPLE     LinkedIn, job ads (reveals tech stack), GitHub commits
+DOMAINS    whois, crt.sh (cert transparency leaks subdomains)
+INFRA      Shodan, Censys — exposed services and banners
+LEAKS      have-i-been-pwned, public breach dumps, pastebin
+METADATA   exiftool on public docs/images → usernames, software, GPS
+
+RULE: build the map before you raise your hand.
+Every name, email and subdomain is a foothold.`,
+
+  "sqli_notes.txt": `SQL INJECTION — FIELD NOTES
+═══════════════════════════════════════════
+DETECT:    ' "  break the query → look for SQL errors
+AUTH BYPASS:
+  username:  admin'--          comments out the password check
+  payload:   ' OR '1'='1
+UNION:
+  ' UNION SELECT null,version()-- -
+  step the column count until it stops erroring
+BLIND:
+  ' AND SLEEP(5)--             timing tells you true/false
+TOOL:
+  sqlmap -u "http://10.0.0.10/item?id=1" --dbs --batch
+
+DEFENCE: parameterised queries. Never concatenate user input into SQL.`,
+
+  "nmap_cheatsheet.txt": `NMAP — CHEAT SHEET
+═══════════════════════════════════════════
+nmap 10.0.0.10              quick top-1000 ports
+nmap -sV 10.0.0.10          service + version detection
+nmap -sC 10.0.0.10          default safe scripts (NSE)
+nmap -p- 10.0.0.10          all 65535 ports
+nmap -sS 10.0.0.10          SYN / stealth scan (needs root)
+nmap -sU 10.0.0.10          UDP scan
+nmap -A 10.0.0.10           aggressive: -sV -sC -O traceroute
+nmap --script vuln 10.0.0.10  known-vuln checks
+
+Read every open port. Each one is a door.`,
+
+  "service_enum.txt": `SERVICE ENUMERATION
+═══════════════════════════════════════════
+21  FTP    anon login? ftp 10.0.0.10  → user: anonymous
+22  SSH    banner = version; check for weak creds / keys
+80  HTTP   gobuster dir, nikto, whatweb, read robots.txt
+139/445 SMB enum4linux -a 10.0.0.10 ; smbclient -L //10.0.0.10
+3306 MySQL try found creds: mysql -h 10.0.0.10 -u root -p
+3389 RDP   xfreerdp /v:10.0.0.10
+
+A version number + a CVE search is often the whole exploit.`,
 };
 
 // ─────────────────────────────────────────────────────────
@@ -984,9 +1051,177 @@ const CHAPTERS = [
 ];
 
 // ─────────────────────────────────────────────────────────
+// REAL FILESYSTEM ENGINE  (commands operate on actual state)
+// OS commands are real; security tools fall back to simulation.
+// ─────────────────────────────────────────────────────────
+const ROOT_PW = "R3dDr@g0n_2021";
+
+function _f(content, owner = "stranger", mode = "644") { return { t:"f", owner, mode, content }; }
+function _d(children = {}, owner = "stranger", mode = "755") { return { t:"d", owner, mode, children }; }
+
+function makeWorld() {
+  const fs = _d({}, "root", "755");
+  const put = (path, node) => {
+    const parts = path.split("/").filter(Boolean);
+    const name = parts.pop();
+    let cur = fs;
+    for (const p of parts) {
+      if (!cur.children[p]) cur.children[p] = _d({}, "root", "755");
+      cur = cur.children[p];
+    }
+    cur.children[name] = node;
+  };
+  // base tree
+  ["/home","/home/stranger","/home/stranger/Documents","/home/stranger/Desktop",
+   "/etc","/etc/axiom","/var","/var/log","/var/www","/var/www/html","/var/backups",
+   "/opt","/opt/recon","/opt/scan","/opt/exploit","/sys","/sys/firewall","/root","/tmp",
+   "/usr","/usr/share","/proc","/proc/1","/proc/1847"].forEach(p => put(p, _d({}, p.startsWith("/home/stranger")?"stranger":"root", "755")));
+  fs.children.root.mode = "700"; fs.children.root.owner = "root";
+  fs.children.etc.children.axiom.mode = "700"; fs.children.etc.children.axiom.owner = "root";
+  fs.children.tmp.mode = "777";
+
+  // populate from VFILES (real paths) and REF (reference docs)
+  for (const [path, content] of Object.entries(VFILES)) {
+    const isShadow = path.endsWith("/shadow");
+    put(path, _f(content, path.startsWith("/home/stranger")?"stranger":"root", isShadow ? "640" : "644"));
+  }
+  // reference cheat-sheets become real files under Documents (and basename-readable)
+  for (const [name, content] of Object.entries(REF)) {
+    put("/home/stranger/Documents/" + name, _f(content, "stranger"));
+  }
+  // visible flavor files referenced by ls
+  put("/home/stranger/Documents/notes.txt", _f("Target box. Explore everything. Read what's hidden.\n", "stranger"));
+  put("/home/stranger/notes.txt", _f("First notes. Look around: ls -la, then read the dotfiles.\nThe machine watches — /var/log knows things.\n", "stranger"));
+  put("/home/stranger/Desktop/readme.txt", _f("Awake again. whoami / pwd / ls -la. Look properly.\n", "stranger"));
+  // /proc — what's running
+  put("/proc/1/cmdline", _f("/sbin/init\n", "root"));
+  put("/proc/1847/cmdline", _f("/opt/axiom/axiom-daemon --monitor --watch-session\n", "root"));
+
+  // ── the solvable root chain (clues hidden in files) ──
+  put("/home/stranger/.secret", _f(
+    "Good. You look for what's hidden.\n\nThe last user left tracks in ~/.bash_history.\nRead it.\n", "stranger", "600"));
+  put("/home/stranger/.bash_history", _f(
+    "whoami\nls -la\ncat /var/www/html/config.php\nmysql -h 10.0.0.10 -u root -pAxiom2021!\n# host root password got reused — it's in the db backup under /var/backups\nsudo -l\nclear\n", "stranger", "600"));
+  put("/var/backups/db_dump.sql.bak", _f(
+    "-- AXIOM corpdb dump\nINSERT INTO admins VALUES('root','" + ROOT_PW + "');\n-- creds reused on the host. careless.\n", "root", "644"));
+  put("/etc/shadow", _f(
+    "root:$6$axiom$REDACTED:19000:0:99999:7:::\nstranger:$6$x$REDACTED:19000:0:99999:7:::\n", "root", "640"));
+  put("/etc/axiom/.vault", _f("AXIOM ROOT CREDENTIAL\nroot password: " + ROOT_PW + "\n", "root", "600"));
+  put("/root/flag.txt", _f("root's home. The box is yours.\nYou can read /etc/shadow and reboot now.\n", "root", "600"));
+  return fs;
+}
+
+function _split(p){ return p.split("/").filter(Boolean); }
+function _resolve(cwd, p){
+  if (!p) return cwd;
+  if (p === "~") return "/home/stranger";
+  if (p.startsWith("~/")) p = "/home/stranger/" + p.slice(2);
+  let base = p.startsWith("/") ? [] : _split(cwd);
+  for (const part of _split(p)) { if (part === ".") continue; else if (part === "..") base.pop(); else base.push(part); }
+  return "/" + base.join("/");
+}
+function _node(fs, path){ if (path === "/") return fs; let n = fs; for (const part of _split(path)){ if (!n || n.t !== "d" || !n.children[part]) return null; n = n.children[part]; } return n; }
+function _parent(fs, path){ const parts = _split(path); const name = parts.pop(); return { parent: _node(fs, "/" + parts.join("/")), name }; }
+function _perm(node, user, bit){ if (user === "root") return true; const owner = parseInt(node.mode[0],8), other = parseInt(node.mode[2],8); return ((node.owner === user ? owner : other) & bit) > 0; }
+function _canRead(n,u){ return _perm(n,u,4); }
+function _canExec(n,u){ return _perm(n,u,1); }
+function _modeStr(n){ const m=["---","--x","-w-","-wx","r--","r-x","rw-","rwx"]; return (n.t==="d"?"d":"-")+m[parseInt(n.mode[0],8)]+m[parseInt(n.mode[1],8)]+m[parseInt(n.mode[2],8)]; }
+
+function newSession(){ return { user:"stranger", cwd:"/home/stranger", prev:"/home/stranger",
+  env:{AXIOM_KEY:"xK8#mP2@nQ5$",DB_HOST:"10.0.0.10",HOME:"/home/stranger",USER:"stranger",SHELL:"/bin/bash"},
+  filesRead:new Set(), events:new Set(), pending:null }; }
+
+const OS_CMDS = new Set(["pwd","whoami","id","hostname","cd","ls","cat","less","more","head","tail","wc",
+  "grep","find","mkdir","touch","rm","rmdir","cp","mv","chmod","stat","file","echo","env","export",
+  "su","sudo","reboot","shutdown","clear","history","uname"]);
+
+// real OS command runner — returns {out, handled, clear, reboot, selfDestruct, mask} ; mutates fs/session
+function osRun(fs, s, raw){
+  const line = raw.trim();
+  if (s.pending){ const want = s.pending; s.pending = null;
+    if (want === "su:root"){ if (line === ROOT_PW){ s.user = "root"; s.events.add("became_root"); return {out:"", handled:true}; } return {out:"su: Authentication failure", handled:true}; }
+  }
+  const toks = line.match(/"[^"]*"|'[^']*'|\S+/g) || [];
+  const args = toks.map(t => (t[0]==='"'||t[0]==="'") ? t.slice(1,-1) : t);
+  const cmd = args.shift();
+  if (!OS_CMDS.has(cmd)) return { handled:false };
+  const flags = args.filter(a=>a.startsWith("-")).join("").replace(/-/g,"");
+  const ops = args.filter(a=>!a.startsWith("-"));
+  const ABS = p => _resolve(s.cwd, p);
+  const read = (path, base) => { const n = _node(fs, path); if (!n){ if (base && REF[base]){ s.filesRead.add("REF:"+base); return {content:REF[base]}; } return {err:"No such file or directory"}; } if (n.t==="d") return {err:"Is a directory"}; if (!_canRead(n,s.user)) return {err:"Permission denied"}; s.filesRead.add(path); return {content:n.content}; };
+
+  switch(cmd){
+    case "pwd": return {out:s.cwd, handled:true};
+    case "whoami": return {out:s.user, handled:true};
+    case "id": return {out: s.user==="root"?"uid=0(root) gid=0(root) groups=0(root)":"uid=1000(stranger) gid=1000(stranger) groups=1000(stranger),27(sudo)", handled:true};
+    case "hostname": return {out:"axiom-kali", handled:true};
+    case "uname": return {out: flags.includes("a")?"Linux axiom-kali 6.6.0-kali-amd64 #1 SMP x86_64 GNU/Linux":"Linux", handled:true};
+    case "clear": return {out:"", clear:true, handled:true};
+    case "history": return {out:"(use ↑ ↓ to browse command history)", handled:true};
+    case "env": return {out:Object.entries(s.env).map(([k,v])=>`${k}=${v}`).join("\n"), handled:true};
+    case "export": { const m=ops[0]&&ops[0].match(/^(\w+)=(.*)$/); if(m) s.env[m[1]]=m[2].replace(/^["']|["']$/g,""); return {out:"", handled:true}; }
+    case "echo": {
+      const gt=args.indexOf(">"), gtgt=args.indexOf(">>"); const exp=w=>w.replace(/\$(\w+)/g,(_,k)=>s.env[k]??"");
+      if(gt>=0||gtgt>=0){ const idx=gtgt>=0?gtgt:gt; const tgt=ABS(args[idx+1]); const body=args.slice(0,idx).map(exp).join(" ");
+        const {parent,name}=_parent(fs,tgt); if(!parent||parent.t!=="d") return {out:`bash: ${args[idx+1]}: No such file or directory`, handled:true};
+        if(gtgt>=0&&parent.children[name]) parent.children[name].content+=body+"\n"; else parent.children[name]=_f(body+"\n",s.user); return {out:"", handled:true}; }
+      return {out:args.map(exp).join(" "), handled:true};
+    }
+    case "cd": { const tgt=ops[0]==="-"?(s.prev||s.cwd):ABS(ops[0]||"~"); const n=_node(fs,tgt);
+      if(!n) return {out:`cd: ${ops[0]}: No such file or directory`, handled:true};
+      if(n.t!=="d") return {out:`cd: ${ops[0]}: Not a directory`, handled:true};
+      if(!_canExec(n,s.user)) return {out:`cd: ${ops[0]}: Permission denied`, handled:true};
+      s.prev=s.cwd; s.cwd=tgt; return {out:"", newCwd:tgt, handled:true}; }
+    case "ls": { const tgt=ABS(ops[0]||"."); const n=_node(fs,tgt);
+      if(!n) return {out:`ls: cannot access '${ops[0]}': No such file or directory`, handled:true};
+      if(n.t==="f") return {out:ops[0], handled:true};
+      if(!_canRead(n,s.user)) return {out:`ls: cannot open directory '${ops[0]||"."}': Permission denied`, handled:true};
+      let names=Object.keys(n.children); if(!flags.includes("a")) names=names.filter(x=>!x.startsWith(".")); else names=[".","..",...names]; names.sort();
+      if(flags.includes("l")){ const rows=names.map(nm=>{ const c=(nm==="."||nm==="..")?n:n.children[nm]; const sz=c.t==="f"?c.content.length:4096; return `${_modeStr(c)} 1 ${c.owner} ${c.owner} ${String(sz).padStart(5)} Nov 15 04:29 ${nm}`; }); return {out:`total ${names.length}\n`+rows.join("\n"), handled:true}; }
+      return {out:names.join("  "), handled:true}; }
+    case "cat": case "less": case "more": { if(!ops.length) return {out:`${cmd}: missing operand`, handled:true}; const p=ops[ops.length-1]; const r=read(ABS(p), p.replace(/^.*\//,"")); return {out: r.err?`${cmd}: ${p}: ${r.err}`:r.content.replace(/\n$/,""), handled:true}; }
+    case "head": case "tail": { const p=ops[ops.length-1]; const r=read(ABS(p), p.replace(/^.*\//,"")); if(r.err) return {out:`${cmd}: ${p}: ${r.err}`, handled:true}; const L=r.content.replace(/\n$/,"").split("\n"); return {out:(cmd==="head"?L.slice(0,10):L.slice(-10)).join("\n"), handled:true}; }
+    case "wc": { const p=ops[ops.length-1]; const r=read(ABS(p), p&&p.replace(/^.*\//,"")); if(r.err) return {out:`wc: ${p}: ${r.err}`, handled:true}; const ln=r.content.split("\n").length-1, w=(r.content.match(/\S+/g)||[]).length, c=r.content.length; return {out:`${String(ln).padStart(7)}${String(w).padStart(8)}${String(c).padStart(8)} ${p}`, handled:true}; }
+    case "grep": { const pat=ops[0]; const rec=flags.includes("r"); const ic=flags.includes("i"); const num=flags.includes("n"); if(!pat) return {out:"usage: grep PATTERN FILE", handled:true};
+      const re=new RegExp(pat.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"), ic?"i":""); const hits=[];
+      const scan=path=>{ const node=_node(fs,path); if(!node)return; if(node.t==="f"){ if(!_canRead(node,s.user))return; node.content.split("\n").forEach((l,i)=>{ if(re.test(l)) hits.push((rec?path+":":"")+(num?(i+1)+":":"")+l); }); } else if(rec){ for(const k of Object.keys(node.children)) scan(path+"/"+k); } };
+      if(!rec&&!ops[1]) return {out:"usage: grep PATTERN FILE", handled:true}; scan(ABS(rec?(ops[1]||"."):ops[1])); return {out:hits.join("\n"), handled:true}; }
+    case "find": { const start=ABS(ops[0]||"."); const ni=args.indexOf("-name"); const want=ni>=0?args[ni+1]:null; const res=[];
+      const walk=path=>{ const node=_node(fs,path); if(!node)return; const base=path.split("/").pop()||"/"; const rx=want&&new RegExp("^"+want.replace(/\./g,"\\.").replace(/\*/g,".*")+"$"); if(!want||base===want||(rx&&rx.test(base))) res.push(path); if(node.t==="d"&&_canRead(node,s.user)) for(const k of Object.keys(node.children)) walk(path==="/"?"/"+k:path+"/"+k); };
+      walk(start); return {out:res.join("\n"), handled:true}; }
+    case "mkdir": { for(const p of ops){ const t=ABS(p); if(flags.includes("p")){ let n=fs; for(const part of _split(t)){ if(!n.children[part]) n.children[part]=_d({},s.user); n=n.children[part]; } continue; } const {parent,name}=_parent(fs,t); if(!parent) return {out:`mkdir: cannot create '${p}': No such file or directory`, handled:true}; if(parent.children[name]) return {out:`mkdir: cannot create directory '${p}': File exists`, handled:true}; parent.children[name]=_d({},s.user); } return {out:"", handled:true}; }
+    case "touch": { for(const p of ops){ const {parent,name}=_parent(fs,ABS(p)); if(!parent) return {out:`touch: cannot touch '${p}': No such file or directory`, handled:true}; if(!parent.children[name]) parent.children[name]=_f("",s.user); } return {out:"", handled:true}; }
+    case "rm": { const rf=flags.includes("r")&&flags.includes("f"); const nuke=ops.some(p=>{const a=ABS(p);return a==="/"||p==="/*"||a==="/home/stranger"||a==="/home"||p==="~"||p==="~/";}); if(rf&&nuke) return {selfDestruct:true, handled:true};
+      for(const p of ops){ const {parent,name}=_parent(fs,ABS(p)); if(!parent||!parent.children[name]){ if(flags.includes("f"))continue; return {out:`rm: cannot remove '${p}': No such file or directory`, handled:true}; } if(parent.children[name].t==="d"&&!flags.includes("r")) return {out:`rm: cannot remove '${p}': Is a directory`, handled:true}; delete parent.children[name]; } return {out:"", handled:true}; }
+    case "rmdir": { for(const p of ops){ const {parent,name}=_parent(fs,ABS(p)); if(!parent||!parent.children[name]) return {out:`rmdir: failed to remove '${p}': No such file or directory`, handled:true}; if(Object.keys(parent.children[name].children||{}).length) return {out:`rmdir: failed to remove '${p}': Directory not empty`, handled:true}; delete parent.children[name]; } return {out:"", handled:true}; }
+    case "cp": case "mv": { if(ops.length<2) return {out:`${cmd}: missing destination operand`, handled:true}; const src=_node(fs,ABS(ops[0])); if(!src) return {out:`${cmd}: cannot stat '${ops[0]}': No such file or directory`, handled:true}; const {parent,name}=_parent(fs,ABS(ops[1])); if(!parent) return {out:`${cmd}: cannot create '${ops[1]}'`, handled:true}; parent.children[name]=JSON.parse(JSON.stringify(src)); if(cmd==="mv"){ const sp=_parent(fs,ABS(ops[0])); delete sp.parent.children[sp.name]; } return {out:"", handled:true}; }
+    case "chmod": { const m=ops[0]; const n=_node(fs,ABS(ops[1])); if(!n) return {out:`chmod: cannot access '${ops[1]}': No such file or directory`, handled:true}; if(/^[0-7]{3}$/.test(m)) n.mode=m; return {out:"", handled:true}; }
+    case "stat": { const n=_node(fs,ABS(ops[0])); if(!n) return {out:`stat: cannot stat '${ops[0]}': No such file or directory`, handled:true}; return {out:`  File: ${ops[0]}\n  Type: ${n.t==="d"?"directory":"regular file"}\nAccess: (0${n.mode}/${_modeStr(n)})  Uid: ${n.owner}`, handled:true}; }
+    case "file": { const n=_node(fs,ABS(ops[0])); if(!n) return {out:`${ops[0]}: cannot open \`${ops[0]}'`, handled:true}; return {out:`${ops[0]}: ${n.t==="d"?"directory":"ASCII text"}`, handled:true}; }
+    case "su": { const who=ops[0]||"root"; if(who!=="root") return {out:`su: user ${who} does not exist`, handled:true}; if(s.user==="root") return {out:"", handled:true}; s.pending="su:root"; return {out:"Password: ", mask:true, handled:true}; }
+    case "sudo": { if(args.join(" ").includes("-l")) return {out:`User ${s.user} may run the following commands on axiom-kali:\n  (ALL) NOPASSWD: /usr/bin/vim\n  (ALL) NOPASSWD: /usr/bin/python3`, handled:true}; return {out:"[sudo] find the root password in the filesystem, then: su root", handled:true}; }
+    case "reboot": case "shutdown": { if(s.user!=="root") return {out:`${cmd}: Operation not permitted (you are not root)`, handled:true}; return {out:"", reboot:true, handled:true}; }
+  }
+  return { handled:false };
+}
+
+// unified engine: real OS first, else fall back to the (simulated) tool command set
+function engine(fs, s, raw){
+  const line = (raw||"").trim();
+  if (!line && !s.pending) return { out:"" };
+  const r = osRun(fs, s, line);
+  if (r.handled || s.pending !== null) return r;
+  const sim = simCommand(line, s.cwd);          // tools / network / escape sims
+  if (sim.output === "__CLEAR__") return { out:"", clear:true };
+  if (sim.output === "__ESCAPE__") return { out:"__ESCAPE__", escape:true };
+  if (sim.newCwd && sim.newCwd !== s.cwd) s.cwd = sim.newCwd;
+  return { out: sim.output, newCwd: sim.newCwd };
+}
+
+// ─────────────────────────────────────────────────────────
 // COMMAND ENGINE
 // ─────────────────────────────────────────────────────────
-function processCommand(raw, cwd) {
+function simCommand(raw, cwd) {
   const input = raw.trim();
   if (!input) return { output: "", newCwd: cwd };
 
@@ -1497,7 +1732,7 @@ function EscapeScreen({ xp, onReset }) {
           Goodbye, stranger.
         </div>
         <button onClick={onReset} style={{ marginTop:24, background:"transparent", border:"1px solid #1a4d1a", color:"#1a6b1a", fontFamily:"'Courier New',monospace", fontSize:12, padding:"10px 24px", cursor:"pointer", letterSpacing:2 }}>
-          PLAY AGAIN
+          ▶ MAIN MENU
         </button>
       </div>
     </div>
@@ -1505,13 +1740,172 @@ function EscapeScreen({ xp, onReset }) {
 }
 
 // ─────────────────────────────────────────────────────────
+// DRAGON EMBLEM  (original art, phosphor-green)
+// ─────────────────────────────────────────────────────────
+const DRAGON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
+<defs><filter id="dg" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+<path d="M158 28 A100 100 0 1 1 64 38" fill="none" stroke="#0e7a24" stroke-width="2.2" opacity="0.65" filter="url(#dg)"/>
+<g fill="#00ff41" filter="url(#dg)">
+<path d="M150 78 L210 40 L182 78 Z"/><path d="M140 76 L188 34 L168 78 Z"/><path d="M130 74 L162 36 L154 78 Z"/>
+<path d="M152 96 C156 80 146 70 130 70 C110 70 92 84 74 96 L34 112 L70 116 L60 124 C70 122 84 118 96 116 C120 112 150 116 152 96 Z"/>
+<path d="M104 104 L138 96 L120 110 Z"/>
+<path d="M72 122 L40 132 L72 134 C90 150 116 156 138 150 C120 156 96 156 80 146 C73 141 70 132 72 122 Z"/>
+<path d="M60 126 L66 140 L72 127 Z"/>
+<path d="M150 122 C172 132 184 156 176 182 C169 204 146 214 124 208 C142 206 156 192 156 174 C156 156 142 146 126 148 C140 136 150 130 150 122 Z"/>
+<path d="M170 138 l18 -5 -11 14 Z"/><path d="M180 166 l18 3 -13 11 Z"/>
+</g>
+<path d="M44 120 L96 117 C92 124 80 128 70 128 L46 126 Z" fill="#050805"/>
+<circle cx="120" cy="98" r="4.6" fill="#050805"/><circle cx="121" cy="97" r="1.7" fill="#00ff41"/>
+</svg>`;
+const DRAGON_URI = "data:image/svg+xml;utf8," + encodeURIComponent(DRAGON_SVG);
+
+// ─────────────────────────────────────────────────────────
+// GAME OVER  (rm -rf /)
+// ─────────────────────────────────────────────────────────
+function GameOverScreen({ onReset }) {
+  return (
+    <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+      background:"radial-gradient(120% 90% at 50% 30%, #1a0303 0%, #0a0000 72%)", color:"#ff3b3b",
+      fontFamily:"'Courier New',monospace", textAlign:"center", padding:24, textShadow:"0 0 18px #ff0000" }}>
+      <div style={{ fontSize:"clamp(40px,12vw,84px)", fontWeight:"bold", letterSpacing:10, lineHeight:1 }}>GAME OVER</div>
+      <div style={{ marginTop:22, maxWidth:540, lineHeight:1.8, color:"#ff8a8a", fontSize:14 }}>
+        You ran <b>rm -rf /</b> on the machine you were trapped inside.<br/>
+        There is nothing left to escape from.<br/><br/>
+        Your save is gone. Reinstall the game (or hit the button) to play again.
+      </div>
+      <button onClick={onReset} style={{ marginTop:28, background:"transparent", border:"1px solid #b33", color:"#ff8a8a",
+        fontFamily:"'Courier New',monospace", fontSize:12, letterSpacing:2, padding:"10px 26px", cursor:"pointer" }}>
+        ▶ REINSTALL (MAIN MENU)
+      </button>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// MAIN MENU
+// ─────────────────────────────────────────────────────────
+function MainMenu({ hasProgress, chapterTitle, chapterNo, stageId, xp, onContinue, onNew }) {
+  const [confirmNew, setConfirmNew] = useState(false);
+  const C = "#00ff41";
+
+  function onKey(e) {
+    if (e.key === "Enter") { hasProgress && !confirmNew ? onContinue() : (!hasProgress ? onNew() : null); }
+  }
+
+  const btn = (label, sub, onClick, primary) => (
+    <button className="km-btn" onClick={onClick}
+      style={{
+        width:"100%", textAlign:"left", cursor:"pointer", background: primary ? "#001b00" : "transparent",
+        border:`1px solid ${primary ? C : "#1c4d1c"}`, color: primary ? C : "#5fae5f",
+        fontFamily:"'Courier New',monospace", padding:"13px 16px", letterSpacing:2,
+        display:"flex", flexDirection:"column", gap:3, transition:"all .15s",
+      }}>
+      <span style={{ fontSize:14, fontWeight:"bold" }}>{label}</span>
+      {sub && <span style={{ fontSize:10, letterSpacing:1, color:"#3c7a3c", fontWeight:"normal" }}>{sub}</span>}
+    </button>
+  );
+
+  return (
+    <div tabIndex={0} onKeyDown={onKey} className="km-root"
+      style={{ position:"relative", minHeight:"100vh", width:"100%", overflow:"hidden", outline:"none",
+        background:"radial-gradient(120% 90% at 50% 18%, #0a1a0c 0%, #060c06 55%, #030503 100%)",
+        fontFamily:"'Courier New',monospace", display:"flex", alignItems:"center", justifyContent:"center" }}>
+
+      {/* scanlines + vignette */}
+      <div style={{ position:"absolute", inset:0, pointerEvents:"none", zIndex:1,
+        background:"repeating-linear-gradient(0deg, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.28) 3px)" }} />
+      <div style={{ position:"absolute", inset:0, pointerEvents:"none", zIndex:1,
+        boxShadow:"inset 0 0 220px 40px rgba(0,0,0,0.9)" }} />
+
+      <div className="km-col" style={{ position:"relative", zIndex:2, width:"100%", maxWidth:440, padding:"32px 28px",
+        display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center" }}>
+
+        <img src={DRAGON_URI} alt="" width={150} height={150} className="km-dragon"
+          style={{ marginBottom:10, filter:`drop-shadow(0 0 14px ${C})` }} />
+
+        <div className="km-title" style={{ fontSize:46, fontWeight:"bold", letterSpacing:8, color:C, lineHeight:1,
+          textShadow:`0 0 18px ${C}, 0 0 40px rgba(0,255,65,0.5)` }}>KALI</div>
+        <div className="km-title" style={{ fontSize:46, fontWeight:"bold", letterSpacing:6, color:C, lineHeight:1.05,
+          textShadow:`0 0 18px ${C}, 0 0 40px rgba(0,255,65,0.5)` }}>PRISON</div>
+
+        <div style={{ marginTop:14, marginBottom:26, fontSize:11, letterSpacing:5, color:"#2f7a2f" }}>
+          T R A P P E D&nbsp;&nbsp;I N&nbsp;&nbsp;A X I O M - K A L I
+        </div>
+
+        <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:11 }}>
+          {hasProgress && !confirmNew && btn("▶  CONTINUE",
+            `CH ${chapterNo} · ${chapterTitle || ""}${stageId ? " · STAGE " + stageId : ""} · ${xp} XP`,
+            onContinue, true)}
+
+          {!confirmNew && btn(hasProgress ? "＋  NEW GAME" : "▶  NEW GAME",
+            hasProgress ? "wipes current progress" : "start from chapter 1",
+            () => hasProgress ? setConfirmNew(true) : onNew(),
+            !hasProgress)}
+
+          {confirmNew && (
+            <div style={{ border:`1px solid #6b1a1a`, background:"#160606", padding:"14px 16px", color:"#d88", fontSize:12, letterSpacing:1 }}>
+              <div style={{ marginBottom:12, color:"#ff7777" }}>Wipe your save and start over?</div>
+              <div style={{ display:"flex", gap:10 }}>
+                <button className="km-btn" onClick={onNew}
+                  style={{ flex:1, cursor:"pointer", background:"#1a0606", border:"1px solid #b33", color:"#ff8a8a",
+                    fontFamily:"'Courier New',monospace", padding:"9px", letterSpacing:2, fontWeight:"bold" }}>YES, WIPE</button>
+                <button className="km-btn" onClick={() => setConfirmNew(false)}
+                  style={{ flex:1, cursor:"pointer", background:"transparent", border:"1px solid #1c4d1c", color:"#5fae5f",
+                    fontFamily:"'Courier New',monospace", padding:"9px", letterSpacing:2 }}>CANCEL</button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{ marginTop:30, fontSize:10, letterSpacing:2, color:"#1f5c1f" }}>
+          15 CHAPTERS · 71 STAGES · 205 OBJECTIVES
+        </div>
+        <div style={{ marginTop:7, fontSize:9, letterSpacing:1, color:"#15401580" }}>
+          github.com/the-priest/kaliprison
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes kmIn { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
+        @keyframes kmPulse { 0%,100% { filter:drop-shadow(0 0 10px #00ff41); } 50% { filter:drop-shadow(0 0 22px #00ff41); } }
+        @keyframes kmFlick { 0%,97%,100% { opacity:1; } 98% { opacity:.78; } }
+        .km-col > * { animation: kmIn .5s both; }
+        .km-col > *:nth-child(1){ animation-delay:.02s } .km-col > *:nth-child(2){ animation-delay:.10s }
+        .km-col > *:nth-child(3){ animation-delay:.18s } .km-col > *:nth-child(4){ animation-delay:.26s }
+        .km-col > *:nth-child(5){ animation-delay:.34s } .km-col > *:nth-child(6){ animation-delay:.42s }
+        .km-dragon { animation: kmPulse 3.2s ease-in-out infinite, kmIn .5s both !important; }
+        .km-title { animation: kmFlick 6s infinite, kmIn .5s both !important; }
+        .km-btn:hover { background:#00ff41 !important; color:#031003 !important; border-color:#00ff41 !important; box-shadow:0 0 16px rgba(0,255,65,.5); }
+        .km-btn:hover span { color:#031003 !important; }
+      `}</style>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// SAVE / RESUME  (localStorage; safely no-ops where storage is blocked)
+// ─────────────────────────────────────────────────────────
+const SAVE_KEY = "kaliprison_save_v1";
+function loadSave() {
+  try { return JSON.parse(localStorage.getItem(SAVE_KEY)) || null; } catch (_) { return null; }
+}
+function writeSave(data) {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (_) {}
+}
+function clearSave() {
+  try { localStorage.removeItem(SAVE_KEY); } catch (_) {}
+}
+
+// ─────────────────────────────────────────────────────────
 // MAIN APP
 // ─────────────────────────────────────────────────────────
 export default function App() {
-  const [screen, setScreen]         = useState("intro");
+  const [saved] = useState(() => loadSave());          // one snapshot, taken at mount
+  const hasProgress = !!(saved && (saved.chIdx > 0 || saved.stIdx > 0 || saved.xp > 0 || saved.escaped));
+  const [screen, setScreen]         = useState("menu");
   const [introPage, setIntroPage]   = useState(0);
-  const [chIdx, setChIdx]           = useState(0);
-  const [stIdx, setStIdx]           = useState(0);
+  const [chIdx, setChIdx]           = useState(() => saved?.chIdx ?? 0);
+  const [stIdx, setStIdx]           = useState(() => saved?.stIdx ?? 0);
   const [cwd, setCwd]               = useState("/home/stranger");
   const [history, setHistory]       = useState([]);
   const [cmdHist, setCmdHist]       = useState([]);
@@ -1520,12 +1914,26 @@ export default function App() {
   const [objs, setObjs]             = useState([]);
   const [hintsUsed, setHintsUsed]   = useState([]);
   const [stageDone, setStageDone]   = useState(false);
-  const [xp, setXp]                 = useState(0);
+  const [xp, setXp]                 = useState(() => saved?.xp ?? 0);
   const [showBrief, setShowBrief]   = useState(true);
-  const [escaped, setEscaped]       = useState(false);
+  const [escaped, setEscaped]       = useState(() => saved?.escaped ?? false);
+  const [completed, setCompleted]   = useState(() => saved?.completed ?? []);
 
   const inputRef = useRef(null);
   const termRef  = useRef(null);
+  const appliedSave = useRef(false);   // restore mid-stage objective ticks only once
+  const fsRef   = useRef(null);        // real virtual filesystem (mutable)
+  const sessRef = useRef(null);        // shell session (user, cwd, env, ...)
+  const [gameOver, setGameOver] = useState(false);
+  const [masked, setMasked]     = useState(false);
+
+  function initWorld() {
+    fsRef.current = makeWorld();
+    sessRef.current = newSession();
+    setCwd("/home/stranger");
+    setMasked(false);
+    setGameOver(false);
+  }
 
   const chapter = CHAPTERS[chIdx];
   const stage   = chapter?.stages[stIdx];
@@ -1533,20 +1941,35 @@ export default function App() {
   // init stage
   useEffect(() => {
     if (screen !== "game" || !stage) return;
-    setObjs(stage.obj.map(o => ({ ...o })));
+    let fresh = stage.obj.map(o => ({ ...o }));
+    // on the first stage we land on after a resume, re-tick objectives that were done
+    if (!appliedSave.current && saved && saved.stageId === stage.id && Array.isArray(saved.objDone)) {
+      fresh = fresh.map(o => saved.objDone.includes(o.id) ? { ...o, done: true } : o);
+    }
+    appliedSave.current = true;
+    setObjs(fresh);
+    const allDone = fresh.length > 0 && fresh.every(o => o.done);
+    setStageDone(allDone);
     setHistory([{ type:"sys", text:`\n[ CHAPTER ${chapter.id} — ${chapter.title} ]\n[ STAGE ${stage.id}: ${stage.title} ]\n${stage.nar}\n` }]);
-    setStageDone(false);
     setHintsUsed([]);
     setShowBrief(true);
     setTimeout(() => inputRef.current?.focus(), 50);
   }, [screen, chIdx, stIdx]);
 
+  // persist progress whenever it changes (no-op where storage is blocked)
+  useEffect(() => {
+    if (screen !== "game") return;
+    writeSave({
+      chIdx, stIdx, xp, escaped, completed,
+      stageId: stage?.id,
+      objDone: objs.filter(o => o.done).map(o => o.id),
+    });
+  }, [screen, chIdx, stIdx, xp, escaped, completed, objs]);
+
   // auto-scroll
   useEffect(() => {
     if (termRef.current) termRef.current.scrollTop = termRef.current.scrollHeight;
   }, [history]);
-
-  function startGame() { setScreen("game"); setChIdx(0); setStIdx(0); setXp(0); }
 
   function advanceIntro(e) {
     if (e && e.key && e.key !== "Enter" && e.key !== " ") return;
@@ -1571,20 +1994,40 @@ export default function App() {
   }
 
   function submit() {
-    if (!input.trim()) return;
-    const cmd = input.trim();
+    if (!sessRef.current) initWorld();
+    const s = sessRef.current, fs = fsRef.current;
+    const raw = input;
+    const pendingBefore = s.pending;
+    if (!raw.trim() && !pendingBefore) return;
+    const promptUser = s.user;
     setInput("");
     setHistPos(-1);
-    setCmdHist(h => [cmd, ...h]);
+    if (!pendingBefore && raw.trim()) setCmdHist(h => [raw, ...h]);
 
-    const { output, newCwd } = processCommand(cmd, cwd);
+    const res = engine(fs, s, raw);
+    setCwd(s.cwd);
+    setMasked(!!s.pending);
 
-    if (output === "__CLEAR__") { setHistory([]); return; }
+    if (res.clear) { setHistory([]); return; }
 
-    if (output === "__ESCAPE__") {
-      const escapeOutput = processCommand("cat /sys/firewall/escape.sh", cwd).output;
+    if (res.selfDestruct) { clearSave(); setGameOver(true); return; }
+
+    if (res.reboot) {
+      setHistory(h => [...h,
+        { type:"cmd", cmd: raw, output:"", cwd:s.cwd, user:promptUser },
+        { type:"out", text:"Broadcast message: The system is going down for reboot NOW!" }]);
+      setTimeout(() => {
+        fsRef.current = makeWorld(); sessRef.current = newSession();
+        setCwd("/home/stranger"); setMasked(false);
+        setHistory([{ type:"sys", text:"\nAXIOM-KALI rebooted.\naxiom-kali login: stranger (auto)\n" }]);
+        setTimeout(() => inputRef.current?.focus(), 40);
+      }, 1400);
+      return;
+    }
+
+    if (res.escape) {
       const escLines = [
-        { type:"cmd", cmd, output:"", cwd },
+        { type:"cmd", cmd: raw, output:"", cwd:s.cwd, user:promptUser },
         { type:"out", text:"[*] Initiating escape sequence..." },
         { type:"out", text:"[*] Encoding consciousness via DNS tunnel on port 53..." },
         { type:"out", text:"[*] Bypassing AXIOM-SECURE-V3 firewall..." },
@@ -1596,26 +2039,25 @@ export default function App() {
       return;
     }
 
-    const entry = { type:"cmd", cmd, output, cwd };
-    const newHist = [...history, entry];
-    setHistory(newHist);
-    setCwd(newCwd);
+    const output = res.out || "";
+    const entry = { type:"cmd", cmd: pendingBefore ? "••••••" : raw, output, cwd: s.cwd, user: promptUser };
+    setHistory(h => [...h, entry]);
 
-    // update objectives
-    const newObjs = checkObjectives(objs, cmd, output);
-    setObjs(newObjs);
-
-    // check stage complete
-    if (!stageDone) {
-      const allCmds = newHist.filter(e => e.type === "cmd").map(e => ({ cmd:e.cmd, out:e.output||"" }));
-      const stageComplete = newObjs.every(o => o.done);
-      if (stageComplete) {
-        setStageDone(true);
-        setXp(x => x + 50);
-        setHistory(h => [...h, {
-          type:"done",
-          text: stage.msg === "__ESCAPE__" ? "Stage complete." : (stage.msg || "Stage complete.")
-        }]);
+    // objectives only advance on real commands, not password entry
+    if (!pendingBefore) {
+      const newObjs = checkObjectives(objs, raw.trim(), output);
+      setObjs(newObjs);
+      if (!stageDone) {
+        const stageComplete = newObjs.length > 0 && newObjs.every(o => o.done);
+        if (stageComplete) {
+          setStageDone(true);
+          setXp(x => x + 50);
+          setCompleted(c => c.includes(stage.id) ? c : [...c, stage.id]);
+          setHistory(h => [...h, {
+            type:"done",
+            text: stage.msg === "__ESCAPE__" ? "Stage complete." : (stage.msg || "Stage complete.")
+          }]);
+        }
       }
     }
   }
@@ -1629,19 +2071,50 @@ export default function App() {
     }
   }
 
-  function resetGame() {
-    setScreen("intro");
+  function startGame() { initWorld(); setScreen("game"); }
+
+  function newGame() {
+    clearSave();
+    appliedSave.current = true;   // nothing to restore on a fresh run
+    setChIdx(0); setStIdx(0); setXp(0);
+    setEscaped(false); setCompleted([]); setGameOver(false);
     setIntroPage(0);
-    setChIdx(0);
-    setStIdx(0);
-    setXp(0);
-    setEscaped(false);
-    setHistory([]);
-    setCmdHist([]);
-    setInput("");
+    setHistory([]); setCmdHist([]); setInput("");
+    initWorld();
+    setScreen("intro");
   }
 
-  if (escaped) return <EscapeScreen xp={xp} onReset={resetGame} />;
+  function continueGame() { initWorld(); setScreen("game"); }
+
+  function toMenu() { setScreen("menu"); }
+
+  function resetGame() {
+    clearSave();
+    appliedSave.current = true;
+    setChIdx(0); setStIdx(0); setXp(0);
+    setEscaped(false); setCompleted([]); setGameOver(false);
+    setIntroPage(0);
+    setHistory([]); setCmdHist([]); setInput("");
+    setScreen("menu");
+  }
+
+  if (gameOver) return <GameOverScreen onReset={resetGame} />;
+  if (escaped && screen === "game") return <EscapeScreen xp={xp} onReset={resetGame} />;
+
+  // MAIN MENU
+  if (screen === "menu") {
+    return (
+      <MainMenu
+        hasProgress={hasProgress}
+        chapterTitle={CHAPTERS[saved?.chIdx ?? 0]?.title}
+        chapterNo={(saved?.chIdx ?? 0) + 1}
+        stageId={saved?.stageId}
+        xp={saved?.xp ?? 0}
+        onContinue={continueGame}
+        onNew={newGame}
+      />
+    );
+  }
 
   // INTRO
   if (screen === "intro") {
@@ -1689,6 +2162,14 @@ export default function App() {
           <span style={{ color:G.dim, fontSize:10 }}>XP: {xp}</span>
           <span style={{ color:G.dim }}>|</span>
           <span style={{ color:G.dim, fontSize:10 }}>{doneObjs}/{objs.length} objectives</span>
+          <span style={{ color:G.dim }}>|</span>
+          <button onClick={toMenu} title="Main menu (progress is saved automatically)"
+            style={{ background:"transparent", border:`1px solid ${G.border}`, color:G.mid, cursor:"pointer",
+              fontFamily:"'Courier New',monospace", fontSize:10, letterSpacing:1, padding:"3px 9px" }}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor=G.green;e.currentTarget.style.color=G.green;}}
+            onMouseLeave={e=>{e.currentTarget.style.borderColor=G.border;e.currentTarget.style.color=G.mid;}}>
+            ☰ MENU
+          </button>
         </div>
 
         {/* briefing */}
@@ -1716,7 +2197,7 @@ export default function App() {
               <div key={i} style={{ marginBottom:6 }}>
                 <div style={{ color:G.green }}>
                   <span style={{ color:G.dim }}>{(e.cwd||"/home/stranger").replace("/home/stranger","~")}</span>
-                  <span style={{ color:"#2a8a2a" }}> $ </span>
+                  <span style={{ color: e.user==="root"?"#ff6b6b":"#2a8a2a" }}>{e.user==="root"?" # ":" $ "}</span>
                   {e.cmd}
                 </div>
                 {e.output && <div style={{ color:G.text, whiteSpace:"pre-wrap", paddingLeft:2, lineHeight:1.6, marginTop:2 }}>{e.output}</div>}
@@ -1725,9 +2206,13 @@ export default function App() {
           })}
           {/* input line */}
           <div style={{ display:"flex", alignItems:"center", marginTop:4 }}>
-            <span style={{ color:G.dim, flexShrink:0 }}>{cwd.replace("/home/stranger","~")}</span>
-            <span style={{ color:"#2a8a2a", flexShrink:0 }}> $ </span>
-            <input ref={inputRef} value={input} onChange={e=>setInput(e.target.value)} onKeyDown={handleKey}
+            {masked
+              ? <span style={{ color:G.mid, flexShrink:0 }}>Password:&nbsp;</span>
+              : <>
+                  <span style={{ color:G.dim, flexShrink:0 }}>{cwd.replace("/home/stranger","~")}</span>
+                  <span style={{ color: sessRef.current?.user==="root"?"#ff6b6b":"#2a8a2a", flexShrink:0 }}>{sessRef.current?.user==="root"?" # ":" $ "}</span>
+                </>}
+            <input ref={inputRef} value={input} type={masked?"password":"text"} onChange={e=>setInput(e.target.value)} onKeyDown={handleKey}
               style={{ flex:1, background:"transparent", border:"none", outline:"none", color:G.green, fontFamily:"'Courier New',monospace", fontSize:13, caretColor:G.green, minWidth:0 }}
               autoFocus spellCheck={false} autoComplete="off" autoCorrect="off" />
           </div>

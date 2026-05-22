@@ -16,9 +16,16 @@ the only way that sticks: by making you *type the commands*. **15 chapters ·
 firewall.
 
 It runs offline as a self-contained `index.html` — React is baked in, nothing
-phones home, no build step, no server. **Every command is simulated**: the
-terminal returns hand-written teaching output and never touches a real system or
-network.
+phones home, no build step, no server.
+
+**What's real vs. simulated.** The Linux layer is a real in-memory filesystem:
+`cd`, `ls`, `cat`, `grep`, `find`, `mkdir`, `touch`, `rm`, `cp`, `mv`, `chmod`,
+`echo >`/`>>`, `su`, `sudo`, `reboot` actually operate on state — you can explore
+the whole box, read hidden files, follow clues, find the root password, become
+root, and read what root can read. The **security tools** (`nmap`, `sqlmap`,
+`hydra`, `hashcat`, `msfconsole`, `mimikatz`, …) are **simulated** — they return
+hand-written teaching output and never touch a real host or network (a browser
+sandbox can't, and shouldn't). Try `rm -rf /` if you're feeling brave.
 
 ---
 
@@ -94,6 +101,17 @@ xdg-open kaliprison/index.html      # or just double-click it
 ```
 
 That’s the whole game. It works with no internet connection.
+
+---
+
+## Saving
+
+Progress saves automatically. Close the game and reopen it — the **main menu**
+offers **Continue** (resumes your chapter, stage and XP) or **New Game**. There's
+a **☰ MENU** button in the top bar during play, and your save persists in the
+browser's local storage for that app. *(In the live preview inside a chat sandbox,
+storage may be blocked, so saving only works in the real installed/standalone
+app — which is how you'll actually play it.)*
 
 ---
 

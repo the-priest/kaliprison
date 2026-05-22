@@ -1,14 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
   <defs>
-    <radialGradient id="g" cx="50%" cy="42%" r="70%">
-      <stop offset="0%" stop-color="#0a160a"/>
-      <stop offset="100%" stop-color="#050805"/>
+    <radialGradient id="bg" cx="50%" cy="34%" r="80%">
+      <stop offset="0%" stop-color="#0c1c0e"/><stop offset="100%" stop-color="#050805"/>
     </radialGradient>
+    <filter id="dg" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
   </defs>
-  <rect width="256" height="256" rx="44" fill="url(#g)"/>
-  <rect x="10" y="10" width="236" height="236" rx="38" fill="none" stroke="#123512" stroke-width="3"/>
-  <g font-family="'Courier New',monospace" font-weight="bold" fill="#00ff41" style="filter:drop-shadow(0 0 8px #00ff41)">
-    <text x="48" y="150" font-size="92">&gt;</text>
-    <rect x="120" y="118" width="60" height="20" fill="#00ff41"/>
+  <rect width="256" height="256" rx="46" fill="url(#bg)"/>
+  <rect x="9" y="9" width="238" height="238" rx="40" fill="none" stroke="#123512" stroke-width="2.5"/>
+  <g transform="translate(8,12) scale(1.0)">
+    <path d="M158 28 A100 100 0 1 1 64 38" fill="none" stroke="#0e7a24" stroke-width="2.2" opacity="0.6" filter="url(#dg)"/>
+    <g fill="#00ff41" filter="url(#dg)">
+      <path d="M150 78 L210 40 L182 78 Z"/><path d="M140 76 L188 34 L168 78 Z"/><path d="M130 74 L162 36 L154 78 Z"/>
+      <path d="M152 96 C156 80 146 70 130 70 C110 70 92 84 74 96 L34 112 L70 116 L60 124 C70 122 84 118 96 116 C120 112 150 116 152 96 Z"/>
+      <path d="M104 104 L138 96 L120 110 Z"/>
+      <path d="M72 122 L40 132 L72 134 C90 150 116 156 138 150 C120 156 96 156 80 146 C73 141 70 132 72 122 Z"/>
+      <path d="M60 126 L66 140 L72 127 Z"/>
+      <path d="M150 122 C172 132 184 156 176 182 C169 204 146 214 124 208 C142 206 156 192 156 174 C156 156 142 146 126 148 C140 136 150 130 150 122 Z"/>
+      <path d="M170 138 l18 -5 -11 14 Z"/><path d="M180 166 l18 3 -13 11 Z"/>
+    </g>
+    <path d="M44 120 L96 117 C92 124 80 128 70 128 L46 126 Z" fill="#050805"/>
+    <circle cx="120" cy="98" r="4.6" fill="#050805"/><circle cx="121" cy="97" r="1.7" fill="#00ff41"/>
   </g>
 </svg>
