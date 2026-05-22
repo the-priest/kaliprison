@@ -1,0 +1,19 @@
+{
+  "name": "kaliprison-build",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Build pipeline for Kali Prison: JSX -> self-contained offline index.html",
+  "scripts": {
+    "build": "node build.js && node assemble.js",
+    "bundle": "node build.js",
+    "assemble": "node assemble.js"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@babel/preset-react": "^7.24.0"
+  }
+}
