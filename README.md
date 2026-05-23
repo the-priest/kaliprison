@@ -20,12 +20,24 @@ phones home, no build step, no server.
 
 **What's real vs. simulated.** The Linux layer is a real in-memory filesystem:
 `cd`, `ls`, `cat`, `grep`, `find`, `mkdir`, `touch`, `rm`, `cp`, `mv`, `chmod`,
-`echo >`/`>>`, `su`, `sudo`, `reboot` actually operate on state — you can explore
-the whole box, read hidden files, follow clues, find the root password, become
-root, and read what root can read. The **security tools** (`nmap`, `sqlmap`,
-`hydra`, `hashcat`, `msfconsole`, `mimikatz`, …) are **simulated** — they return
-hand-written teaching output and never touch a real host or network (a browser
-sandbox can't, and shouldn't). Try `rm -rf /` if you're feeling brave.
+`echo >`/`>>`, real pipes (`|`), `base64`, `rev`, `tr`, `sort`, `uniq`, `cut`,
+`strings`, `su`, `sudo`, `reboot` actually operate on state — you can explore
+the whole box, decode ciphers, chain forensics one-liners, follow clues, find the
+root password, become root, and read what root can read. The **security tools**
+(`nmap`, `sqlmap`, `hydra`, `hashcat`, `msfconsole`, `mimikatz`, …) are
+**simulated** — they return hand-written teaching output and never touch a real
+host or network (a browser sandbox can't, and shouldn't). Try `rm -rf /` if
+you're feeling brave.
+
+**The puzzles teach.** Every one of the 71 stages is built around a real
+*mission goal*, not a command to copy. Hints are layered — a vague nudge first,
+more only if you ask for it — so you choose how much you struggle. Clear a stage
+and you get an explicit **WHAT YOU LEARNED** debrief explaining the technique and
+why it matters in the real world. Threaded through all fifteen chapters is the
+mystery of **V**, the pentester trapped here before you, whose notes, workspace,
+and three hidden cipher fragments (one base64-encoded, one buried in a file that
+lies about being an image, one readable only as root) assemble into the key to
+the escape — and a second, true ending for anyone who actually explores.
 
 ---
 
