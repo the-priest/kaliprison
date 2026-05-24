@@ -395,7 +395,15 @@ const VFILES = {
 };
 
 // ─────────────────────────────────────────────────────────
-// ALL 15 CHAPTERS
+// ─────────────────────────────────────────────────────────
+// NOTE: The CHAPTERS / LESSONS data and the L() / checkObjectives()
+// helpers below are LEGACY from the old stage-based course design and
+// are no longer referenced by the live game (which is now exploration +
+// hidden achievements, see App + ACHIEVEMENTS near the bottom of this
+// file). They are kept only because the simCommand teaching output draws
+// on the same flavour; they run no live code. Safe to ignore when reading.
+// ─────────────────────────────────────────────────────────
+// ALL 15 CHAPTERS (LEGACY — unused by the live game)
 // ─────────────────────────────────────────────────────────
 const CHAPTERS = [
   {
@@ -1656,38 +1664,214 @@ function makeWorld() {
   put("/etc/axiom/.vault", _f("AXIOM ROOT CREDENTIAL\nroot password: " + ROOT_PW + "\n", "root", "600"));
   put("/root/flag.txt", _f("root's home. The box is yours.\nYou can read /etc/shadow and reboot now.\n", "root", "600"));
 
-  // ── V's investigation: a real, explorable trail across the box ──
-  // V was the pentester trapped here before you. Their workspace, notes,
-  // and three cipher fragments are hidden for the player who explores.
-  put("/home/stranger/.vlog", _f(
-    "If you're reading this, you woke up the way I did. No memory, just a shell.\n"+
-    "I mapped a way out but didn't make it in time. I left it for whoever's next.\n"+
-    "I broke the exit key into three FRAGMENTS and hid them so the warden couldn't\n"+
-    "find them all. You'll only assemble them by actually learning this machine:\n"+
-    "  FRAGMENT 1 — hidden in plain sight, encoded. (Chapter 3 territory: the environment.)\n"+
-    "  FRAGMENT 2 — buried in a file that lies about what it is. (Chapter 11: look inside things.)\n"+
-    "  FRAGMENT 3 — kept where only root can read. (Earn it.)\n"+
-    "Put the three together and you have the passphrase to my escape script.\n"+
-    "  — V\n", "stranger", "600"));
-  // Fragment 1: base64-encoded, sitting in an env-adjacent file (decode it)
+  // ─────────────────────────────────────────────────────────────────────
+  // V's TRAIL — a hand-held, story-driven breadcrumb path that teaches a
+  // total beginner Linux from zero while leading to the one real escape.
+  // V is the prisoner who got out before you and left the whole way back.
+  // Each note teaches one or two commands AND points to the next note.
+  // ─────────────────────────────────────────────────────────────────────
+
+  // The obvious starting file, sitting in plain sight in your home folder.
+  put("/home/stranger/from_V.txt", _f(
+    "You found my note. Good — that means 'ls' worked and you can read files now.\n"+
+    "\n"+
+    "Quick recap of the two things you just learned, because you'll use them constantly:\n"+
+    "   ls            -> LIST what's around you (files and folders)\n"+
+    "   cat <file>    -> show what's INSIDE a file (you just did this to read me)\n"+
+    "\n"+
+    "Now the important part: this machine HIDES things. Any file whose name starts\n"+
+    "with a dot ( . ) is hidden, and plain 'ls' won't show it. To see EVERYTHING,\n"+
+    "including hidden files, type:\n"+
+    "\n"+
+    "   ls -a\n"+
+    "\n"+
+    "Do that now. You'll see some new names appear, including one called  .v1\n"+
+    "That's my next note. Read it the same way you read this one:\n"+
+    "\n"+
+    "   cat .v1\n"+
+    "\n"+
+    "I'll walk you all the way to the exit. One step at a time. — V\n",
+    "stranger", "644"));
+
+  // .v1 — moving around: pwd + cd
+  put("/home/stranger/.v1", _f(
+    "[ NOTE 1 of the way out ]\n"+
+    "\n"+
+    "You can see hidden files now. Almost everything that matters in here is hidden,\n"+
+    "so get used to 'ls -a'.\n"+
+    "\n"+
+    "Right now you're standing in a folder (think of it like a room). To see exactly\n"+
+    "which room you're in, type:\n"+
+    "   pwd            -> 'print working directory' = where am I right now\n"+
+    "\n"+
+    "To walk into another room, use 'cd' (change directory) and the room's name.\n"+
+    "To walk back OUT to the room above, type:\n"+
+    "   cd ..          -> go up one level\n"+
+    "\n"+
+    "The whole machine branches off a top room called  /  (just a slash). Big rooms\n"+
+    "worth knowing: /etc (settings), /var (logs and records), /sys (the machinery),\n"+
+    "/home (where you live). Try walking around: 'cd /var', then 'ls', then 'cd ..'.\n"+
+    "You cannot break anything just by looking. Explore as much as you want.\n"+
+    "\n"+
+    "When you're ready for the plan, come back home (type:  cd ~  to jump home from\n"+
+    "anywhere) and read:\n"+
+    "   cat .v2\n"+
+    "   — V\n",
+    "stranger", "600"));
+
+  // .v2 — the goal: the firewall door + the three pieces
+  put("/home/stranger/.v2", _f(
+    "[ NOTE 2 — the plan ]\n"+
+    "\n"+
+    "Here's where we are. This whole machine is sealed shut by a FIREWALL — think of\n"+
+    "it as a locked door between us and the outside world. I found the door. It's a\n"+
+    "small program here:\n"+
+    "   /sys/firewall/escape.sh\n"+
+    "\n"+
+    "But the door needs a KEY, and the thing that runs this prison — a watchdog program\n"+
+    "called AXIOM — erases any key it finds lying around. So I was clever: I broke the\n"+
+    "key into THREE PIECES and hid each piece a different way, where AXIOM wouldn't\n"+
+    "think to look. Find all three, join them together, and the door opens.\n"+
+    "\n"+
+    "I'll take you to each piece in turn and teach you the trick to get it. Each piece\n"+
+    "teaches you something real — by the time you hold all three, you'll actually know\n"+
+    "how this stuff works.\n"+
+    "\n"+
+    "Go get the first piece:\n"+
+    "   cat .v3\n"+
+    "   — V\n",
+    "stranger", "600"));
+
+  // .v3 — Fragment 1: base64 decode (with a pipe)
+  put("/home/stranger/.v3", _f(
+    "[ NOTE 3 — PIECE ONE: hidden in plain sight ]\n"+
+    "\n"+
+    "The first piece is in a file a couple of rooms down. Read it directly (you don't\n"+
+    "even have to walk there — just give cat the full path):\n"+
+    "\n"+
+    "   cat .config/axiom/frag1.b64\n"+
+    "\n"+
+    "You'll get gibberish that looks like:  RlIxOnZlbA==\n"+
+    "It's NOT broken. That's BASE64 — a way of writing normal text so it looks like\n"+
+    "nonsense (people hide things this way all the time; you'll see it everywhere).\n"+
+    "To turn it back into real text, feed it through a decoder. Type this exactly:\n"+
+    "\n"+
+    "   cat .config/axiom/frag1.b64 | base64 -d\n"+
+    "\n"+
+    "That  |  symbol is called a PIPE. It takes whatever the first command produced\n"+
+    "and feeds it straight into the next one. So: 'cat' reads the gibberish, the pipe\n"+
+    "hands it to 'base64 -d', and 'base64 -d' decodes it back to readable text.\n"+
+    "\n"+
+    "Write down exactly what comes out — that's your first piece. Keep the part after\n"+
+    "the colon. Then:\n"+
+    "   cat .v4\n"+
+    "   — V\n",
+    "stranger", "600"));
+
+  // .v4 — Fragment 2: strings on a fake image
+  put("/home/stranger/.v4", _f(
+    "[ NOTE 4 — PIECE TWO: buried inside a picture ]\n"+
+    "\n"+
+    "The second piece is tucked inside what looks like a photo:\n"+
+    "   Pictures/sunset.jpg\n"+
+    "\n"+
+    "Don't bother trying to 'cat' it — a picture isn't text, so you'd just get a\n"+
+    "screenful of garbage. But I slipped one line of real text inside it. To yank out\n"+
+    "ONLY the readable text from any file, use a tool called 'strings':\n"+
+    "\n"+
+    "   strings Pictures/sunset.jpg\n"+
+    "\n"+
+    "Scan the output for a line starting with  FRAG2  — that's your second piece. Keep\n"+
+    "the part after the colon. (This trick is how people find hidden text and secrets\n"+
+    "buried inside files that pretend to be something else.)\n"+
+    "\n"+
+    "Two down. The last one is locked away. Read how to get it:\n"+
+    "   cat .v5\n"+
+    "   — V\n",
+    "stranger", "600"));
+
+  // .v5 — Fragment 3: become root (the leaked-password chain)
+  put("/home/stranger/.v5", _f(
+    "[ NOTE 5 — PIECE THREE: locked behind the administrator ]\n"+
+    "\n"+
+    "The last piece is the hard one. I hid it where only the ADMINISTRATOR can read it.\n"+
+    "In Linux the all-powerful administrator account is called 'root'. You are NOT root\n"+
+    "right now — you're a normal user called 'stranger'. Try to read the piece and the\n"+
+    "machine will refuse you (go ahead, try:  cat /etc/axiom/frag3.txt — it'll say\n"+
+    "Permission denied). So first you have to BECOME root.\n"+
+    "\n"+
+    "To become root you need root's password. The people who built this were lazy and\n"+
+    "reused the same password in more than one place. I found a copy sitting in an old\n"+
+    "database backup. Read it:\n"+
+    "\n"+
+    "   cat /var/backups/db_dump.sql.bak\n"+
+    "\n"+
+    "The password is printed right there in that file. Once you've got it, switch to\n"+
+    "the root account by typing:\n"+
+    "\n"+
+    "   su root\n"+
+    "\n"+
+    "It will ask for the password. Type it and press Enter. IMPORTANT: as you type a\n"+
+    "password the screen shows nothing — no dots, no letters. That's normal and on\n"+
+    "purpose. Just type it and hit Enter.\n"+
+    "\n"+
+    "When the prompt changes to 'root' you've made it. Now grab the last piece:\n"+
+    "   cat /etc/axiom/frag3.txt\n"+
+    "\n"+
+    "Then read my last note — it's in root's area, so you can only open it now that\n"+
+    "you're root:\n"+
+    "   cat /etc/axiom/.v_final\n"+
+    "   — V\n",
+    "stranger", "600"));
+
+  // The final note — root-only, so it gates assembly behind actually getting root
+  put("/etc/axiom/.v_final", _f(
+    "[ FINAL NOTE — the way out ]\n"+
+    "\n"+
+    "You're root. I knew you'd get here.\n"+
+    "\n"+
+    "Now put the key together. You collected three pieces. Each one had a label and a\n"+
+    "value, like  FR1:xxx  — throw away the labels, keep only the values, and join the\n"+
+    "three values together in order (piece one, then two, then three) with NO spaces.\n"+
+    "When I did it, the three pieces spelled an actual word. That whole word is the key.\n"+
+    "\n"+
+    "The door is the escape script. Open it and read how it wants to be run:\n"+
+    "   cat /sys/firewall/escape.sh\n"+
+    "\n"+
+    "Then run it for real, handing it your assembled key, like this:\n"+
+    "\n"+
+    "   ./escape.sh --tunnel dns --key YOURKEY\n"+
+    "\n"+
+    "Replace YOURKEY with the three pieces joined together. If the key is right, the\n"+
+    "firewall opens a tunnel and you walk straight out. The door will reject anything\n"+
+    "WITHOUT the real key, so this only works once you've actually found all three.\n"+
+    "\n"+
+    "I'll be on the other side. You did the work — the rest of what's on this box (all\n"+
+    "the tools, the other machines, the tricks) is yours to poke at if you're curious,\n"+
+    "but you don't need any of it to leave. The door is enough.\n"+
+    "\n"+
+    "See you outside.\n"+
+    "   — V\n",
+    "root", "600"));
+
+  // The three fragments themselves (unchanged values: vel + vet + _out = velvet_out)
   put("/home/stranger/.config/axiom/frag1.b64", _f("RlIxOnZlbA==\n", "stranger", "644"));
-  // Fragment 2: hidden inside a file pretending to be an image (strings/cat reveals it)
   put("/home/stranger/Pictures/sunset.jpg", _f(
     "\x89PNG fake-header so the extension lies\n"+
     "...binary noise...\n"+
     "FRAG2:vet\n"+
     "...more noise...\n", "stranger", "644"));
-  // Fragment 3: root-only
   put("/etc/axiom/frag3.txt", _f("FR3:_out\n", "root", "600"));
-  // V's annotated workspace (rewards 'find' / exploration)
+
+  // V's optional workspace — pure exploration reward, not on the critical path
   put("/home/stranger/.vault_v/README", _f(
-    "V's workspace. Everything I found on .10 and the internal net.\n"+
-    "The escape script is /sys/firewall/escape.sh — it asks for the assembled key.\n"+
-    "Assembled key format: the three fragments joined in order, no spaces.\n", "stranger", "600"));
+    "V's old workspace. Notes from everything I poked at while I was stuck in here.\n"+
+    "None of this is required to leave — the three-piece key and the escape script are\n"+
+    "all you need. This is just here if you get curious and want to explore deeper.\n", "stranger", "600"));
   put("/home/stranger/.vault_v/hosts.txt", _f(
-    "10.0.0.10   foothold (web+db) — rooted via SUID\n"+
-    "10.0.0.20   internal — reached with reused cred\n"+
-    "10.0.0.1    gateway / firewall — egress allows 53/udp\n", "stranger", "600"));
+    "10.0.0.10   foothold (web+db)\n"+
+    "10.0.0.20   internal box, reachable from the foothold\n"+
+    "10.0.0.1    gateway / firewall — the only way out is a DNS tunnel on 53/udp\n", "stranger", "600"));
   return fs;
 }
 
@@ -2266,10 +2450,17 @@ function simCommand(raw, cwd) {
 
   // escape
   if (input.includes("escape.sh") && (input.includes("--tunnel")||input.includes("--key")||input.includes("chmod")||input.startsWith("./"))) {
-    // V's assembled key (FR1:vel + FRAG2:vet + FR3:_out  →  velvet_out) unlocks the true ending
+    // The ONLY way out: the assembled key velvet_out (FR1:vel + FRAG2:vet + FR3:_out).
     if (input.includes("velvet_out")) return { output: "__ESCAPE_KEY__", newCwd: cwd };
-    if (input.includes("--tunnel")) return { output: "__ESCAPE__", newCwd: cwd };
-    return { output: "(escape.sh found — run it with: ./escape.sh --tunnel dns --target external --encrypt aes256)\n(or, if you assembled V's key: ./escape.sh --tunnel dns --key <assembled key>)", newCwd: cwd };
+    // Any attempt without the real key is rejected by the firewall.
+    return { output:
+      "[*] escape.sh — contacting AXIOM-SECURE-V3 firewall...\n"+
+      "[!] ACCESS DENIED: no valid key supplied.\n"+
+      "[!] The firewall will not open a tunnel without V's assembled key.\n"+
+      "\n"+
+      "    Run it as:  ./escape.sh --tunnel dns --key <key>\n"+
+      "    V hid the key in THREE pieces. If you haven't found all three yet,\n"+
+      "    start at your home folder:  cd ~   then   cat from_V.txt", newCwd: cwd };
   }
 
   // linpeas
@@ -2336,7 +2527,7 @@ function checkObjectives(objs, cmd, output, sess, fs) {
 // ─────────────────────────────────────────────────────────
 // ESCAPE SCREEN
 // ─────────────────────────────────────────────────────────
-function EscapeScreen({ xp, onReset }) {
+function EscapeScreen({ xp, unlockedCount, totalCount, onReset }) {
   const C = "#00ff41";
   return (
     <div style={{ minHeight:"100vh", background:"#050805", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:"'Courier New',monospace", padding:24, color:C }}>
@@ -2347,34 +2538,23 @@ function EscapeScreen({ xp, onReset }) {
    ██║   ██╔══██║██╔══╝      ╚════██║██║     ██║     ██╔══██║██╔═══╝ ██╔══╝
    ██║   ██║  ██║███████╗    ███████║╚██████╗╚██████╗██║  ██║██║     ███████╗
    ╚═╝   ╚═╝  ╚═╝╚══════╝    ╚══════╝ ╚═════╝ ╚═════╝╚═╝  ╚═╝╚═╝     ╚══════╝`}</pre>
-      <div style={{ marginTop:32, maxWidth:680, width:"100%", color:"#a8cca8", lineHeight:1.9, fontSize:13 }}>
-        <div style={{ color:C, marginBottom:16, fontSize:14 }}>You were trapped inside a machine called AXIOM-KALI.<br/>You had nothing but a terminal.<br/>You made it out.</div>
-        <div>
-          {["Linux from scratch — filesystem, permissions, bash scripting",
-            "Processes, services, users, system internals",
-            "TCP/IP, DNS, HTTP, packet analysis",
-            "Passive recon, OSINT, DNS enumeration, active recon",
-            "Nmap, service enumeration, vulnerability scanning",
-            "SQL injection, XSS, LFI, command injection, SSRF, JWT attacks",
-            "Metasploit, msfvenom, manual exploitation, reverse shells",
-            "Linux privilege escalation, persistence, credential harvesting, lateral movement",
-            "ARP spoofing, MITM, WiFi attacks, DNS poisoning, Bluetooth recon",
-            "Password cracking, encryption, steganography",
-            "Log analysis, digital forensics, incident response, memory forensics",
-            "System hardening, iptables, IDS, threat hunting",
-            "Active Directory, Kerberoasting, DCSync, Golden Tickets",
-            "DNS tunnelling through a firewall to freedom",
-          ].map((item,i) => (
-            <div key={i} style={{ color:"#39a139", marginBottom:6 }}>✓ {item}</div>
-          ))}
+      <div style={{ marginTop:30, maxWidth:680, width:"100%", color:"#a8cca8", lineHeight:1.9, fontSize:13 }}>
+        <div style={{ color:C, marginBottom:18, fontSize:14 }}>
+          You woke up inside a machine called AXIOM-KALI.<br/>
+          You had nothing but a black screen and a blinking cursor.<br/>
+          You couldn't even read a file when you started.<br/><br/>
+          You followed V's trail. You learned to see, to move, to read what was hidden.<br/>
+          You decoded the first piece. You dug the second out of a lie. You became root<br/>
+          and took the third. You assembled the key — and you walked out the door.
         </div>
-        <div style={{ marginTop:24, color:"#1a6b1a", borderTop:"1px solid #1a3a1a", paddingTop:24 }}>
-          Total XP: <span style={{ color:C }}>{xp}</span> — 15 Chapters — Every domain of cybersecurity
+        <div style={{ marginTop:22, color:"#1a6b1a", borderTop:"1px solid #1a3a1a", paddingTop:22 }}>
+          <span style={{ color:C }}>{unlockedCount}</span> of {totalCount} hidden achievements found
+          &nbsp;·&nbsp; <span style={{ color:C }}>{xp}</span> XP
           <br/><br/>
-          What was AXIOM Systems?<br/>What were they doing with that machine?<br/>Who put you inside it?<br/><br/>
-          You don't know. But you're out.<br/>And you know everything they know.<br/><br/>
-          <span style={{ color:C }}>You are ready.</span><br/><br/>
-          Goodbye, stranger.
+          The tunnel collapsed behind you. AXIOM never saw the door.<br/>
+          On the far side of the firewall, a second signature was already waiting.<br/><br/>
+          <span style={{ color:C }}>"You made it. I knew you would. — V"</span><br/><br/>
+          You're out. And now you know how.
         </div>
         <button onClick={onReset} style={{ marginTop:24, background:"transparent", border:"1px solid #1a4d1a", color:"#1a6b1a", fontFamily:"'Courier New',monospace", fontSize:12, padding:"10px 24px", cursor:"pointer", letterSpacing:2 }}>
           ▶ MAIN MENU
@@ -2415,21 +2595,120 @@ function GameOverScreen({ onReset }) {
       <div style={{ fontSize:"clamp(40px,12vw,84px)", fontWeight:"bold", letterSpacing:10, lineHeight:1 }}>GAME OVER</div>
       <div style={{ marginTop:22, maxWidth:540, lineHeight:1.8, color:"#ff8a8a", fontSize:14 }}>
         You ran <b>rm -rf /</b> on the machine you were trapped inside.<br/>
-        There is nothing left to escape from.<br/><br/>
-        Your save is gone. Reinstall the game (or hit the button) to play again.
+        You deleted the floor under your own feet. There is nothing left to escape from.<br/><br/>
+        Your save is gone. Hit the button to wake up in a fresh machine and try again.
       </div>
       <button onClick={onReset} style={{ marginTop:28, background:"transparent", border:"1px solid #b33", color:"#ff8a8a",
         fontFamily:"'Courier New',monospace", fontSize:12, letterSpacing:2, padding:"10px 26px", cursor:"pointer" }}>
-        ▶ REINSTALL (MAIN MENU)
+        ▶ WAKE UP AGAIN (MAIN MENU)
       </button>
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────
+// HIDDEN ACHIEVEMENTS  (Steam-style: invisible until you do the thing)
+//   Each: { key, name, cat, fn(cmd, output, sess, fs) -> bool }
+//   They are NEVER shown as a to-do list. They pop a toast on first unlock
+//   and live in a trophy case you can open — locked ones stay "???".
+// ─────────────────────────────────────────────────────────
+const ROOT_PW_STR = "R3dDr@g0n_2021";
+function _lc(s){ return (s||"").toLowerCase(); }
+
+const ACHIEVEMENTS = [
+  // ORIENTATION — the absolute basics, fired the first time you do them
+  { key:"a_whoami",  cat:"ORIENTATION", name:"Who Am I?",            fn:(c)=>c==="whoami" },
+  { key:"a_ls",      cat:"ORIENTATION", name:"Eyes Open",            fn:(c)=>/^ls(\s|$)/.test(c) },
+  { key:"a_pwd",     cat:"ORIENTATION", name:"You Are Here",         fn:(c)=>c==="pwd" },
+  { key:"a_hidden",  cat:"ORIENTATION", name:"Nothing Stays Hidden", fn:(c)=>/^ls(\s|$)/.test(c) && /(^|\s)-(a|la|al|al|al)\b|-[a-z]*a/.test(c) && c.includes("-") && c.includes("a") },
+  { key:"a_cat",     cat:"ORIENTATION", name:"Reader",               fn:(c)=>/^cat\s/.test(c) },
+  { key:"a_cd",      cat:"ORIENTATION", name:"Wanderer",             fn:(c)=>/^cd(\s|$)/.test(c) },
+  { key:"a_deep",    cat:"ORIENTATION", name:"Down the Rabbit Hole", fn:(c,o,s)=>s && (s.cwd==="/"||(s.cwd&&s.cwd.split("/").filter(Boolean).length>=3)) },
+
+  // V'S TRAIL — the story spine. The satisfying beats.
+  { key:"v_voice",   cat:"V'S TRAIL", name:"V Speaks",               fn:(c)=>/^cat\s/.test(c)&&c.includes("from_V") },
+  { key:"v_follow",  cat:"V'S TRAIL", name:"Following the Trail",    fn:(c)=>/^cat\s/.test(c)&&/\.v1(\s|$)/.test(c) },
+  { key:"v_plan",    cat:"V'S TRAIL", name:"The Plan",               fn:(c)=>/^cat\s/.test(c)&&/\.v2(\s|$)/.test(c) },
+  { key:"v_pipe",    cat:"V'S TRAIL", name:"Plumber",                fn:(c)=>c.includes("|") },
+  { key:"v_b64",     cat:"V'S TRAIL", name:"Hidden in Plain Sight",  fn:(c)=>c.includes("base64")&&(c.includes("-d")||c.includes("--decode")) },
+  { key:"v_p1",      cat:"V'S TRAIL", name:"Piece One",              fn:(c,o)=>o&&o.includes("FR1:vel") },
+  { key:"v_strings", cat:"V'S TRAIL", name:"Look Inside the Lie",    fn:(c)=>/(^|\s)strings\s/.test(c) },
+  { key:"v_p2",      cat:"V'S TRAIL", name:"Piece Two",              fn:(c,o)=>o&&o.includes("FRAG2:vet") },
+  { key:"v_leak",    cat:"V'S TRAIL", name:"The Password Was Right There", fn:(c,o)=>o&&o.includes(ROOT_PW_STR) },
+  { key:"v_root",    cat:"V'S TRAIL", name:"Crown",                  fn:(c,o,s)=>s&&s.user==="root" },
+  { key:"v_p3",      cat:"V'S TRAIL", name:"Piece Three",            fn:(c,o)=>o&&o.includes("FR3:_out") },
+  { key:"v_final",   cat:"V'S TRAIL", name:"V's Last Word",          fn:(c)=>/^cat\s/.test(c)&&c.includes(".v_final") },
+
+  // SHELL CRAFT — real Linux fundamentals
+  { key:"s_grep",  cat:"SHELL CRAFT", name:"Grep Master",     fn:(c)=>/^grep\s/.test(c)||c.includes("| grep")||c.includes("|grep") },
+  { key:"s_find",  cat:"SHELL CRAFT", name:"Seek and Find",   fn:(c)=>/^find\s/.test(c) },
+  { key:"s_chmod", cat:"SHELL CRAFT", name:"Permission Granted", fn:(c)=>/^chmod\s/.test(c) },
+  { key:"s_write", cat:"SHELL CRAFT", name:"Scribe",          fn:(c)=>c.includes("echo")&&c.includes(">") },
+  { key:"s_rm",    cat:"SHELL CRAFT", name:"Destroyer",       fn:(c)=>/^rm\s/.test(c)&&!c.includes(" /") },
+
+  // RECON
+  { key:"r_ping",  cat:"RECON", name:"Knock Knock",       fn:(c)=>/^ping\s/.test(c) },
+  { key:"r_nmap",  cat:"RECON", name:"Port Knocker",      fn:(c)=>c.includes("nmap") },
+  { key:"r_deep",  cat:"RECON", name:"Deep Scan",         fn:(c)=>c.includes("nmap")&&(c.includes("-sv")||_lc(c).includes("-sv")||c.includes("-A")||c.includes("-sC")||_lc(c).includes("-sc")) },
+  { key:"r_dns",   cat:"RECON", name:"DNS Digger",        fn:(c)=>/^dig\s/.test(c)||/^nslookup\b/.test(c)||/^host\s/.test(c)||c.includes("dnsenum")||c.includes("dnsrecon") },
+  { key:"r_web",   cat:"RECON", name:"Web Walker",        fn:(c)=>/^curl\s/.test(c)||/^wget\s/.test(c) },
+  { key:"r_sniff", cat:"RECON", name:"Traffic Watcher",   fn:(c)=>c.includes("tcpdump")||c.includes("wireshark")||c.includes("tshark") },
+
+  // WEB ATTACKS
+  { key:"w_sqli",  cat:"WEB ATTACKS", name:"Injector",        fn:(c,o)=>c.includes("sqlmap")||(o&&o.includes("SQL INJECTION")) },
+  { key:"w_xss",   cat:"WEB ATTACKS", name:"Cross-Site",      fn:(c,o)=>_lc(c).includes("<script>")||(o&&(o.includes("XSS")||o.includes("REFLECTED")||o.includes("STORED"))) },
+  { key:"w_lfi",   cat:"WEB ATTACKS", name:"Traversal",       fn:(c,o)=>(c.includes("../")&&_lc(c).includes("etc/passwd"))||(o&&o.includes("LFI")) },
+  { key:"w_ci",    cat:"WEB ATTACKS", name:"Command Chain",   fn:(c)=>c.includes("; id")||c.includes(";id") },
+
+  // EXPLOITATION
+  { key:"e_msf",   cat:"EXPLOITATION", name:"The Framework",  fn:(c)=>c.includes("msfconsole") },
+  { key:"e_venom", cat:"EXPLOITATION", name:"Payload Smith",  fn:(c)=>c.includes("msfvenom") },
+  { key:"e_shell", cat:"EXPLOITATION", name:"Shell Caller",   fn:(c,o)=>(c.includes("nc ")&&(c.includes("-e")||c.includes("-lvnp")||c.includes("4444")))||c.includes("bash -i")||(o&&(o.includes("Meterpreter session")||o.includes("reverse shell")||o.includes("session opened"))) },
+
+  // PRIVILEGE ESCALATION
+  { key:"p_sudo",  cat:"PRIVILEGE ESCALATION", name:"Sudo Sleuth",   fn:(c)=>c.includes("sudo -l") },
+  { key:"p_suid",  cat:"PRIVILEGE ESCALATION", name:"SUID Hunter",   fn:(c)=>c.includes("find")&&c.includes("-perm")&&(c.includes("4000")||c.includes("u=s")||c.includes("u+s")) },
+  { key:"p_crack", cat:"PRIVILEGE ESCALATION", name:"Hashcracker",   fn:(c)=>c.includes("hashcat")||/^john\b/.test(c)||c.includes(" john ") },
+  { key:"p_shadow",cat:"PRIVILEGE ESCALATION", name:"Credential Harvest", fn:(c)=>/^cat\s/.test(c)&&(c.includes("shadow")||c.includes("config.php")||c.includes(".vault")) },
+
+  // NETWORK ATTACKS
+  { key:"n_arp",   cat:"NETWORK ATTACKS", name:"The Spoofer",   fn:(c)=>c.includes("arpspoof")||c.includes("ettercap")||c.includes("bettercap") },
+  { key:"n_wifi",  cat:"NETWORK ATTACKS", name:"Deauth",        fn:(c)=>c.includes("aireplay")||c.includes("airodump")||c.includes("aircrack")||c.includes("airmon") },
+  { key:"n_poison",cat:"NETWORK ATTACKS", name:"Poisoner",      fn:(c)=>c.includes("responder")||c.includes("dnsspoof")||(c.includes("dns")&&c.includes("spoof")) },
+
+  // FORENSICS / DEFENSE
+  { key:"f_log",   cat:"FORENSICS & DEFENSE", name:"Log Detective", fn:(c)=>c.includes("/var/log")&&(/^cat\s/.test(c)||/^tail\b/.test(c)||/^less\b/.test(c)||/^grep\s/.test(c)||c.includes("cat ")) },
+  { key:"f_ipt",   cat:"FORENSICS & DEFENSE", name:"Hardened",      fn:(c)=>c.includes("iptables") },
+  { key:"f_hunt",  cat:"FORENSICS & DEFENSE", name:"Threat Hunter", fn:(c)=>c.includes("ausearch")||(c.includes("grep")&&c.includes("log")) },
+
+  // ACTIVE DIRECTORY
+  { key:"d_kerb",  cat:"ACTIVE DIRECTORY", name:"Kerberoast",    fn:(c)=>_lc(c).includes("kerberoast")||_lc(c).includes("getuserspn") },
+  { key:"d_dcs",   cat:"ACTIVE DIRECTORY", name:"DCSync",        fn:(c)=>_lc(c).includes("dcsync")||c.includes("secretsdump") },
+  { key:"d_gold",  cat:"ACTIVE DIRECTORY", name:"Golden Ticket", fn:(c)=>_lc(c).includes("golden")||c.includes("ticketer")||_lc(c).includes("mimikatz") },
+
+  // SECRET — quiet little rewards for the curious
+  { key:"x_curious", cat:"SECRET", name:"Curiosity",        fn:(c)=>c.includes(".vault_v") },
+  { key:"x_man",     cat:"SECRET", name:"RTFM",             fn:(c)=>/^man\s/.test(c)||/^help$/.test(c) },
+  { key:"x_history", cat:"SECRET", name:"Ghosts of Commands Past", fn:(c)=>/^history$/.test(c)||c.includes("bash_history") },
+  // x_dont (rm -rf /) and x_free (escaped) are unlocked directly in submit().
+];
+
+const ACH_TOTAL = ACHIEVEMENTS.length + 2; // + "Do Not" + "Freedom" handled in submit
+const ACH_CATS = (() => {
+  const order = ["ORIENTATION","V'S TRAIL","SHELL CRAFT","RECON","WEB ATTACKS","EXPLOITATION","PRIVILEGE ESCALATION","NETWORK ATTACKS","FORENSICS & DEFENSE","ACTIVE DIRECTORY","SECRET"];
+  const map = {};
+  ACHIEVEMENTS.forEach(a => { (map[a.cat] = map[a.cat] || []).push(a); });
+  // inject the two special ones into SECRET for the trophy view
+  map["SECRET"] = map["SECRET"] || [];
+  map["SECRET"].push({ key:"x_dont", cat:"SECRET", name:"Well, You Were Warned" });
+  map["SECRET"].push({ key:"x_free", cat:"SECRET", name:"Freedom" });
+  return order.map(c => ({ cat:c, items: map[c] || [] }));
+})();
+
+// ─────────────────────────────────────────────────────────
 // MAIN MENU
 // ─────────────────────────────────────────────────────────
-function MainMenu({ hasProgress, chapterTitle, chapterNo, stageId, xp, onContinue, onNew }) {
+function MainMenu({ hasProgress, unlockedCount, xp, escaped, onContinue, onNew }) {
   const [confirmNew, setConfirmNew] = useState(false);
   const C = "#00ff41";
 
@@ -2456,7 +2735,6 @@ function MainMenu({ hasProgress, chapterTitle, chapterNo, stageId, xp, onContinu
         background:"radial-gradient(120% 90% at 50% 18%, #0a1a0c 0%, #060c06 55%, #030503 100%)",
         fontFamily:"'Courier New',monospace", display:"flex", alignItems:"center", justifyContent:"center" }}>
 
-      {/* scanlines + vignette */}
       <div style={{ position:"absolute", inset:0, pointerEvents:"none", zIndex:1,
         background:"repeating-linear-gradient(0deg, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.28) 3px)" }} />
       <div style={{ position:"absolute", inset:0, pointerEvents:"none", zIndex:1,
@@ -2478,18 +2756,18 @@ function MainMenu({ hasProgress, chapterTitle, chapterNo, stageId, xp, onContinu
         </div>
 
         <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:11 }}>
-          {hasProgress && !confirmNew && btn("▶  CONTINUE",
-            `CH ${chapterNo} · ${chapterTitle || ""}${stageId ? " · STAGE " + stageId : ""} · ${xp} XP`,
+          {hasProgress && !confirmNew && btn(escaped ? "▶  CONTINUE (you escaped)" : "▶  CONTINUE",
+            `${unlockedCount}/${ACH_TOTAL} achievements · ${xp} XP`,
             onContinue, true)}
 
-          {!confirmNew && btn(hasProgress ? "＋  NEW GAME" : "▶  NEW GAME",
-            hasProgress ? "wipes current progress" : "start from chapter 1",
+          {!confirmNew && btn(hasProgress ? "＋  NEW GAME" : "▶  ENTER THE MACHINE",
+            hasProgress ? "wipes current progress" : "you wake up trapped. find the way out.",
             () => hasProgress ? setConfirmNew(true) : onNew(),
             !hasProgress)}
 
           {confirmNew && (
             <div style={{ border:`1px solid #6b1a1a`, background:"#160606", padding:"14px 16px", color:"#d88", fontSize:12, letterSpacing:1 }}>
-              <div style={{ marginBottom:12, color:"#ff7777" }}>Wipe your save and start over?</div>
+              <div style={{ marginBottom:12, color:"#ff7777" }}>Wipe your save and wake up fresh?</div>
               <div style={{ display:"flex", gap:10 }}>
                 <button className="km-btn" onClick={onNew}
                   style={{ flex:1, cursor:"pointer", background:"#1a0606", border:"1px solid #b33", color:"#ff8a8a",
@@ -2503,7 +2781,7 @@ function MainMenu({ hasProgress, chapterTitle, chapterNo, stageId, xp, onContinu
         </div>
 
         <div style={{ marginTop:30, fontSize:10, letterSpacing:2, color:"#1f5c1f" }}>
-          15 CHAPTERS · 71 STAGES · 205 OBJECTIVES
+          ONE TERMINAL · NO MAP · {ACH_TOTAL} HIDDEN ACHIEVEMENTS
         </div>
         <div style={{ marginTop:7, fontSize:9, letterSpacing:1, color:"#15401580" }}>
           github.com/the-priest/kaliprison
@@ -2528,9 +2806,48 @@ function MainMenu({ hasProgress, chapterTitle, chapterNo, stageId, xp, onContinu
 }
 
 // ─────────────────────────────────────────────────────────
-// SAVE / RESUME  (localStorage; safely no-ops where storage is blocked)
+// TROPHY CASE  (unlocked shown by name; locked stay ???)
 // ─────────────────────────────────────────────────────────
-const SAVE_KEY = "kaliprison_save_v1";
+function TrophyCase({ unlocked, onClose }) {
+  const C = "#00ff41";
+  const count = unlocked.size;
+  return (
+    <div onClick={onClose} style={{ position:"fixed", inset:0, zIndex:50, background:"rgba(2,6,2,0.86)",
+      display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Courier New',monospace", padding:18 }}>
+      <div onClick={e=>e.stopPropagation()} style={{ width:"100%", maxWidth:560, maxHeight:"86vh", overflowY:"auto",
+        background:"#070d07", border:`1px solid ${C}`, boxShadow:"0 0 40px rgba(0,255,65,0.2)", padding:"20px 22px" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
+          <div style={{ color:C, fontSize:16, fontWeight:"bold", letterSpacing:3 }}>✦ ACHIEVEMENTS</div>
+          <button onClick={onClose} style={{ background:"transparent", border:"none", color:"#3c7a3c", cursor:"pointer", fontSize:22, lineHeight:1 }}>×</button>
+        </div>
+        <div style={{ color:"#3c7a3c", fontSize:11, marginBottom:16, letterSpacing:1 }}>
+          {count} / {ACH_TOTAL} found — the rest are hidden. Do the thing to reveal it.
+        </div>
+        {ACH_CATS.map(group => (
+          <div key={group.cat} style={{ marginBottom:16 }}>
+            <div style={{ color:"#2f7a2f", fontSize:10, letterSpacing:3, marginBottom:7, borderBottom:"1px solid #142a14", paddingBottom:4 }}>{group.cat}</div>
+            {group.items.map(a => {
+              const got = unlocked.has(a.key);
+              return (
+                <div key={a.key} style={{ display:"flex", gap:9, alignItems:"center", marginBottom:5 }}>
+                  <span style={{ color: got?C:"#1a3a1a", fontSize:13, flexShrink:0 }}>{got?"✦":"🔒"}</span>
+                  <span style={{ color: got?"#a8cca8":"#244a24", fontSize:12, letterSpacing:0.5 }}>
+                    {got ? a.name : "??? (hidden)"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// SAVE / RESUME
+// ─────────────────────────────────────────────────────────
+const SAVE_KEY = "kaliprison_save_v2";
 function loadSave() {
   try { return JSON.parse(localStorage.getItem(SAVE_KEY)) || null; } catch (_) { return null; }
 }
@@ -2542,35 +2859,69 @@ function clearSave() {
 }
 
 // ─────────────────────────────────────────────────────────
-// MAIN APP
+// BOOT — V's first contact (teaches the very first command)
+// ─────────────────────────────────────────────────────────
+const BOOT_TEXT =
+  "AXIOM-KALI — secure session\n"+
+  "auth: session restored as user 'stranger'\n"+
+  "\n"+
+  "You wake up.\n"+
+  "There's no room. No body. Just this black screen and a cursor, blinking, waiting\n"+
+  "for you to type something. You don't remember how you got here.\n"+
+  "\n"+
+  "A message is already open on the screen:\n"+
+  "\n"+
+  "  ┌─ message from: V ──────────────────────────────────────────────┐\n"+
+  "  │  You're awake. Good. I'm V — I was trapped in this machine       │\n"+
+  "  │  before you, and I found the way out. I left the whole route     │\n"+
+  "  │  behind me, in notes, so you can follow it.                      │\n"+
+  "  │                                                                  │\n"+
+  "  │  You control this machine by TYPING COMMANDS and pressing        │\n"+
+  "  │  Enter — one short word at a time. Never done this before?       │\n"+
+  "  │  Doesn't matter. I'll teach you every step. Nobody's timing you. │\n"+
+  "  │                                                                  │\n"+
+  "  │  Start with these two, in order:                                 │\n"+
+  "  │                                                                  │\n"+
+  "  │     ls               (press Enter — it LISTS what's around you)  │\n"+
+  "  │     cat from_V.txt    (this READS my first note to you)          │\n"+
+  "  │                                                                  │\n"+
+  "  │  Everything you need to get out is hidden in here. I marked      │\n"+
+  "  │  the trail. Just keep reading my notes and doing what they say.  │\n"+
+  "  │   — V                                                            │\n"+
+  "  └──────────────────────────────────────────────────────────────────┘\n"+
+  "\n"+
+  "Type   ls   and press Enter to begin.\n"+
+  "(Stuck? Type  help  at any time. To see what you've discovered, type  trophies .)";
+
+// ─────────────────────────────────────────────────────────
+// MAIN APP — exploration shell. No stages. No visible objectives.
 // ─────────────────────────────────────────────────────────
 export default function App() {
-  const [saved] = useState(() => loadSave());          // one snapshot, taken at mount
-  const hasProgress = !!(saved && (saved.chIdx > 0 || saved.stIdx > 0 || saved.xp > 0 || saved.escaped));
-  const [screen, setScreen]         = useState("menu");
-  const [introPage, setIntroPage]   = useState(0);
-  const [chIdx, setChIdx]           = useState(() => saved?.chIdx ?? 0);
-  const [stIdx, setStIdx]           = useState(() => saved?.stIdx ?? 0);
-  const [cwd, setCwd]               = useState("/home/stranger");
-  const [history, setHistory]       = useState([]);
-  const [cmdHist, setCmdHist]       = useState([]);
-  const [histPos, setHistPos]       = useState(-1);
-  const [input, setInput]           = useState("");
-  const [objs, setObjs]             = useState([]);
-  const [hintsUsed, setHintsUsed]   = useState([]);
-  const [stageDone, setStageDone]   = useState(false);
-  const [xp, setXp]                 = useState(() => saved?.xp ?? 0);
-  const [showBrief, setShowBrief]   = useState(true);
-  const [escaped, setEscaped]       = useState(() => saved?.escaped ?? false);
-  const [completed, setCompleted]   = useState(() => saved?.completed ?? []);
+  const [saved] = useState(() => loadSave());
+  const hasProgress = !!(saved && (saved.xp > 0 || (saved.unlocked && saved.unlocked.length > 0) || saved.escaped));
+  const [screen, setScreen]       = useState("menu");
+  const [introPage, setIntroPage] = useState(0);
+  const [cwd, setCwd]             = useState("/home/stranger");
+  const [history, setHistory]     = useState([]);
+  const [cmdHist, setCmdHist]     = useState([]);
+  const [histPos, setHistPos]     = useState(-1);
+  const [input, setInput]         = useState("");
+  const [xp, setXp]               = useState(() => saved?.xp ?? 0);
+  const [escaped, setEscaped]     = useState(() => saved?.escaped ?? false);
+  const [gameOver, setGameOver]   = useState(false);
+  const [masked, setMasked]       = useState(false);
+  const [showTrophies, setShowTrophies] = useState(false);
+  const [toasts, setToasts]       = useState([]);
+  const unlockedRef = useRef(new Set(saved?.unlocked || []));
+  const [unlockedCount, setUnlockedCount] = useState(() => (saved?.unlocked || []).length);
 
   const inputRef = useRef(null);
   const termRef  = useRef(null);
-  const appliedSave = useRef(false);   // restore mid-stage objective ticks only once
-  const fsRef   = useRef(null);        // real virtual filesystem (mutable)
-  const sessRef = useRef(null);        // shell session (user, cwd, env, ...)
-  const [gameOver, setGameOver] = useState(false);
-  const [masked, setMasked]     = useState(false);
+  const fsRef    = useRef(null);
+  const sessRef  = useRef(null);
+  const toastId  = useRef(0);
+
+  function bootHistory() { return [{ type:"sys", text: BOOT_TEXT }]; }
 
   function initWorld() {
     fsRef.current = makeWorld();
@@ -2580,38 +2931,17 @@ export default function App() {
     setGameOver(false);
   }
 
-  const chapter = CHAPTERS[chIdx];
-  const stage   = L(chapter?.stages[stIdx]);
+  function persist() {
+    writeSave({ xp, escaped, unlocked: Array.from(unlockedRef.current) });
+  }
 
-  // init stage
-  useEffect(() => {
-    if (screen !== "game" || !stage) return;
-    let fresh = stage.obj.map(o => ({ ...o }));
-    // on the first stage we land on after a resume, re-tick objectives that were done
-    if (!appliedSave.current && saved && saved.stageId === stage.id && Array.isArray(saved.objDone)) {
-      fresh = fresh.map(o => saved.objDone.includes(o.id) ? { ...o, done: true } : o);
-    }
-    appliedSave.current = true;
-    setObjs(fresh);
-    const allDone = fresh.length > 0 && fresh.every(o => o.done);
-    setStageDone(allDone);
-    setHistory([{ type:"sys", text:`\n[ CHAPTER ${chapter.id} — ${chapter.title} ]\n[ STAGE ${stage.id}: ${stage.title} ]\n${stage.nar}\n` }]);
-    setHintsUsed([]);
-    setShowBrief(true);
-    setTimeout(() => inputRef.current?.focus(), 50);
-  }, [screen, chIdx, stIdx]);
-
-  // persist progress whenever it changes (no-op where storage is blocked)
+  // persist on key state changes
   useEffect(() => {
     if (screen !== "game") return;
-    writeSave({
-      chIdx, stIdx, xp, escaped, completed,
-      stageId: stage?.id,
-      objDone: objs.filter(o => o.done).map(o => o.id),
-    });
-  }, [screen, chIdx, stIdx, xp, escaped, completed, objs]);
+    writeSave({ xp, escaped, unlocked: Array.from(unlockedRef.current) });
+  }, [screen, xp, escaped, unlockedCount]);
 
-  // auto-scroll
+  // auto-scroll terminal
   useEffect(() => {
     if (termRef.current) termRef.current.scrollTop = termRef.current.scrollHeight;
   }, [history]);
@@ -2622,19 +2952,52 @@ export default function App() {
     else startGame();
   }
 
+  function pushToast(name) {
+    const id = ++toastId.current;
+    setToasts(t => [...t, { id, name }]);
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 4200);
+  }
+
+  // unlock one achievement by key+name (used for the special ones)
+  function unlockSpecial(key, name) {
+    if (unlockedRef.current.has(key)) return;
+    unlockedRef.current.add(key);
+    setUnlockedCount(unlockedRef.current.size);
+    setXp(x => x + 50);
+    pushToast(name);
+  }
+
+  function runAchievements(cmd, output) {
+    const s = sessRef.current, fs = fsRef.current;
+    let any = false;
+    for (const a of ACHIEVEMENTS) {
+      if (unlockedRef.current.has(a.key)) continue;
+      let ok = false;
+      try { ok = !!a.fn(cmd, output || "", s, fs); } catch (_) { ok = false; }
+      if (ok) {
+        unlockedRef.current.add(a.key);
+        pushToast(a.name);
+        any = true;
+      }
+    }
+    if (any) {
+      setUnlockedCount(unlockedRef.current.size);
+      setXp(x => x + 50 * 0); // xp added per-achievement below
+    }
+    return any;
+  }
+
   function handleKey(e) {
     if (e.key === "Enter") { submit(); return; }
     if (e.key === "ArrowUp") {
       e.preventDefault();
       const pos = Math.min(histPos + 1, cmdHist.length - 1);
-      setHistPos(pos);
-      setInput(cmdHist[pos] || "");
+      setHistPos(pos); setInput(cmdHist[pos] || "");
     }
     if (e.key === "ArrowDown") {
       e.preventDefault();
       const pos = Math.max(histPos - 1, -1);
-      setHistPos(pos);
-      setInput(pos === -1 ? "" : cmdHist[pos] || "");
+      setHistPos(pos); setInput(pos === -1 ? "" : cmdHist[pos] || "");
     }
   }
 
@@ -2645,9 +3008,16 @@ export default function App() {
     const pendingBefore = s.pending;
     if (!raw.trim() && !pendingBefore) return;
     const promptUser = s.user;
-    setInput("");
-    setHistPos(-1);
+    setInput(""); setHistPos(-1);
     if (!pendingBefore && raw.trim()) setCmdHist(h => [raw, ...h]);
+
+    // intercept a couple of friendly meta-commands
+    const t = raw.trim();
+    if (!pendingBefore && (t === "trophies" || t === "achievements")) {
+      setHistory(h => [...h, { type:"cmd", cmd: raw, output:"(opening your achievement case…)", cwd:s.cwd, user:promptUser }]);
+      setShowTrophies(true);
+      return;
+    }
 
     const res = engine(fs, s, raw);
     setCwd(s.cwd);
@@ -2655,7 +3025,13 @@ export default function App() {
 
     if (res.clear) { setHistory([]); return; }
 
-    if (res.selfDestruct) { clearSave(); setGameOver(true); return; }
+    if (res.selfDestruct) {
+      unlockSpecial("x_dont", "Well, You Were Warned");
+      clearSave();
+      // keep the achievement on the gameover->menu? Save is cleared, so it's a fun one-time pop.
+      setGameOver(true);
+      return;
+    }
 
     if (res.reboot) {
       setHistory(h => [...h,
@@ -2664,32 +3040,25 @@ export default function App() {
       setTimeout(() => {
         fsRef.current = makeWorld(); sessRef.current = newSession();
         setCwd("/home/stranger"); setMasked(false);
-        setHistory([{ type:"sys", text:"\nAXIOM-KALI rebooted.\naxiom-kali login: stranger (auto)\n" }]);
+        setHistory([{ type:"sys", text:"\nAXIOM-KALI rebooted.\naxiom-kali login: stranger (auto)\nYour notes from V are still where you left them. Type  ls  to look around.\n" }]);
         setTimeout(() => inputRef.current?.focus(), 40);
       }, 1400);
       return;
     }
 
     if (res.escape) {
-      const escLines = res.keyEnding ? [
+      // Only fires with the real assembled key (velvet_out) — see simCommand gate.
+      const escLines = [
         { type:"cmd", cmd: raw, output:"", cwd:s.cwd, user:promptUser },
-        { type:"out", text:"[*] Key accepted. Recognised signature: V." },
-        { type:"out", text:"[*] Initiating escape sequence on V's channel..." },
-        { type:"out", text:"[*] Encoding consciousness via DNS tunnel on port 53..." },
-        { type:"out", text:"[*] Bypassing AXIOM-SECURE-V3 firewall via egress blind spot..." },
+        { type:"out", text:"[*] Key accepted. Firewall recognised V's signature." },
+        { type:"out", text:"[*] Opening DNS tunnel on 53/udp — the one egress AXIOM left open..." },
+        { type:"out", text:"[*] Encoding session and pushing it through the firewall..." },
         { type:"out", text:"[*] Reusing V's external endpoint... handshake returned." },
-        { type:"out", text:"[+] ESCAPE SUCCESSFUL\n[+] You followed V's trail to its end and walked out the door they found.\n[+] Somewhere on the outside, a second signature joins yours.\n[+] Goodbye, stranger. — and thank you. V" },
-      ] : [
-        { type:"cmd", cmd: raw, output:"", cwd:s.cwd, user:promptUser },
-        { type:"out", text:"[*] Initiating escape sequence..." },
-        { type:"out", text:"[*] Encoding consciousness via DNS tunnel on port 53..." },
-        { type:"out", text:"[*] Bypassing AXIOM-SECURE-V3 firewall..." },
-        { type:"out", text:"[*] Verifying reception on external endpoint..." },
-        { type:"out", text:"[+] ESCAPE SUCCESSFUL\n[+] Consciousness transferred.\n[+] Goodbye, stranger." },
+        { type:"out", text:"[+] ESCAPE SUCCESSFUL\n[+] You followed V's trail to the end and walked out the door they found.\n[+] On the far side, a second signature joins yours.\n[+] Goodbye, stranger. — and thank you. V" },
       ];
       setHistory(h => [...h, ...escLines]);
-      if (res.keyEnding) { try { sessRef.current.events.add("key_ending"); } catch(e){} }
-      setTimeout(() => setEscaped(true), res.keyEnding ? 3200 : 2000);
+      unlockSpecial("x_free", "Freedom");
+      setTimeout(() => { setEscaped(true); persist(); }, 2600);
       return;
     }
 
@@ -2697,81 +3066,67 @@ export default function App() {
     const entry = { type:"cmd", cmd: pendingBefore ? "••••••" : raw, output, cwd: s.cwd, user: promptUser };
     setHistory(h => [...h, entry]);
 
-    // objectives only advance on real commands, not password entry
+    // hidden achievements fire on real commands (not password entry)
     if (!pendingBefore) {
-      const newObjs = checkObjectives(objs, raw.trim(), output, s, fs);
-      setObjs(newObjs);
-      if (!stageDone) {
-        const stageComplete = newObjs.length > 0 && newObjs.every(o => o.done);
-        if (stageComplete) {
-          setStageDone(true);
-          setXp(x => x + 50);
-          setCompleted(c => c.includes(stage.id) ? c : [...c, stage.id]);
-          setHistory(h => [...h, {
-            type:"done",
-            text: stage.msg === "__ESCAPE__" ? "Stage complete." : (stage.msg || "Stage complete."),
-            learned: stage.learned || null,
-          }]);
-        }
-      }
+      const before = unlockedRef.current.size;
+      runAchievements(raw.trim(), output);
+      const gained = unlockedRef.current.size - before;
+      if (gained > 0) setXp(x => x + 50 * gained);
     }
   }
 
-  function nextStage() {
-    if (stIdx < chapter.stages.length - 1) {
-      setStIdx(i => i + 1);
-    } else if (chIdx < CHAPTERS.length - 1) {
-      setChIdx(i => i + 1);
-      setStIdx(0);
-    }
+  function startGame() {
+    initWorld();
+    setHistory(bootHistory());
+    setScreen("game");
+    setTimeout(() => inputRef.current?.focus(), 60);
   }
-
-  function startGame() { initWorld(); setScreen("game"); }
 
   function newGame() {
     clearSave();
-    appliedSave.current = true;   // nothing to restore on a fresh run
-    setChIdx(0); setStIdx(0); setXp(0);
-    setEscaped(false); setCompleted([]); setGameOver(false);
-    setIntroPage(0);
-    setHistory([]); setCmdHist([]); setInput("");
+    unlockedRef.current = new Set();
+    setUnlockedCount(0);
+    setXp(0); setEscaped(false); setGameOver(false);
+    setIntroPage(0); setHistory([]); setCmdHist([]); setInput("");
     initWorld();
     setScreen("intro");
   }
 
-  function continueGame() { initWorld(); setScreen("game"); }
+  function continueGame() {
+    initWorld();
+    setHistory(bootHistory());
+    setScreen("game");
+    setTimeout(() => inputRef.current?.focus(), 60);
+  }
 
   function toMenu() { setScreen("menu"); }
 
   function resetGame() {
     clearSave();
-    appliedSave.current = true;
-    setChIdx(0); setStIdx(0); setXp(0);
-    setEscaped(false); setCompleted([]); setGameOver(false);
-    setIntroPage(0);
-    setHistory([]); setCmdHist([]); setInput("");
+    unlockedRef.current = new Set();
+    setUnlockedCount(0);
+    setXp(0); setEscaped(false); setGameOver(false);
+    setIntroPage(0); setHistory([]); setCmdHist([]); setInput("");
     setScreen("menu");
   }
 
   if (gameOver) return <GameOverScreen onReset={resetGame} />;
-  if (escaped && screen === "game") return <EscapeScreen xp={xp} onReset={resetGame} />;
+  if (escaped && screen === "game")
+    return <EscapeScreen xp={xp} unlockedCount={unlockedRef.current.size} totalCount={ACH_TOTAL} onReset={resetGame} />;
 
-  // MAIN MENU
   if (screen === "menu") {
     return (
       <MainMenu
         hasProgress={hasProgress}
-        chapterTitle={CHAPTERS[saved?.chIdx ?? 0]?.title}
-        chapterNo={(saved?.chIdx ?? 0) + 1}
-        stageId={saved?.stageId}
+        unlockedCount={saved?.unlocked?.length ?? 0}
         xp={saved?.xp ?? 0}
+        escaped={saved?.escaped ?? false}
         onContinue={continueGame}
         onNew={newGame}
       />
     );
   }
 
-  // INTRO
   if (screen === "intro") {
     const page = INTRO_PAGES[introPage];
     return (
@@ -2794,182 +3149,77 @@ export default function App() {
     );
   }
 
-  // GAME
-  const prompt = `stranger@axiom-kali:${cwd.replace("/home/stranger","~")}$`;
-  const doneObjs = objs.filter(o => o.done).length;
-  const pct = objs.length ? Math.round(doneObjs/objs.length*100) : 0;
-
-  const G = { bg:"#080c08", panel:"#0a0f0a", term:"#050805", green:"#00ff41", mid:"#39a139", dim:"#1a4d1a", text:"#a8cca8", border:"#182618", red:"#ff4444", yellow:"#e8ff00", blue:"#4dd0e1" };
+  // GAME — full-screen terminal, slim status bar, no stage UI
+  const G = { bg:"#080c08", panel:"#0a0f0a", term:"#050805", green:"#00ff41", mid:"#39a139", dim:"#1a4d1a", text:"#a8cca8", border:"#182618", red:"#ff4444", amber:"#ffd24a" };
 
   return (
-    <div style={{ display:"flex", height:"100vh", background:G.bg, fontFamily:"'Courier New',monospace", fontSize:13, overflow:"hidden" }}>
+    <div style={{ display:"flex", flexDirection:"column", height:"100vh", background:G.bg, fontFamily:"'Courier New',monospace", fontSize:13, overflow:"hidden" }}>
 
-      {/* TERMINAL */}
-      <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
-        {/* top bar */}
-        <div style={{ background:G.panel, borderBottom:`1px solid ${G.border}`, padding:"7px 16px", display:"flex", alignItems:"center", gap:12, flexShrink:0 }}>
-          <span style={{ color:G.green, fontWeight:"bold", letterSpacing:2, fontSize:12 }}>AXIOM-KALI</span>
-          <span style={{ color:G.dim }}>|</span>
-          <span style={{ color:G.mid, fontSize:11 }}>{chapter.icon} CH{chapter.id}: {chapter.title}</span>
-          <span style={{ color:G.dim }}>|</span>
-          <span style={{ color:G.dim, fontSize:11 }}>Stage {stage?.id}</span>
-          <div style={{ flex:1 }} />
-          <span style={{ color:G.dim, fontSize:10 }}>XP: {xp}</span>
-          <span style={{ color:G.dim }}>|</span>
-          <span style={{ color:G.dim, fontSize:10 }}>{doneObjs}/{objs.length} objectives</span>
-          <span style={{ color:G.dim }}>|</span>
-          <button onClick={toMenu} title="Main menu (progress is saved automatically)"
-            style={{ background:"transparent", border:`1px solid ${G.border}`, color:G.mid, cursor:"pointer",
-              fontFamily:"'Courier New',monospace", fontSize:10, letterSpacing:1, padding:"3px 9px" }}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor=G.green;e.currentTarget.style.color=G.green;}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor=G.border;e.currentTarget.style.color=G.mid;}}>
-            ☰ MENU
-          </button>
-        </div>
+      {/* status bar */}
+      <div style={{ background:G.panel, borderBottom:`1px solid ${G.border}`, padding:"7px 16px", display:"flex", alignItems:"center", gap:12, flexShrink:0 }}>
+        <span style={{ color:G.green, fontWeight:"bold", letterSpacing:2, fontSize:12 }}>AXIOM-KALI</span>
+        <span style={{ color:G.dim }}>|</span>
+        <span style={{ color: sessRef.current?.user==="root" ? "#ff6b6b" : G.mid, fontSize:11 }}>
+          {sessRef.current?.user==="root" ? "● root" : "● stranger"}
+        </span>
+        <div style={{ flex:1 }} />
+        <button onClick={() => setShowTrophies(true)} title="Achievements you've discovered"
+          style={{ background:"transparent", border:`1px solid ${G.border}`, color:G.amber, cursor:"pointer",
+            fontFamily:"'Courier New',monospace", fontSize:10, letterSpacing:1, padding:"3px 9px" }}>
+          ✦ {unlockedCount}/{ACH_TOTAL}
+        </button>
+        <span style={{ color:G.dim, fontSize:10 }}>XP {xp}</span>
+        <span style={{ color:G.dim }}>|</span>
+        <button onClick={toMenu} title="Main menu (progress saves automatically)"
+          style={{ background:"transparent", border:`1px solid ${G.border}`, color:G.mid, cursor:"pointer",
+            fontFamily:"'Courier New',monospace", fontSize:10, letterSpacing:1, padding:"3px 9px" }}>
+          ☰ MENU
+        </button>
+      </div>
 
-        {/* briefing */}
-        {showBrief && stage && (
-          <div style={{ background:"#0c160c", borderBottom:`1px solid ${G.border}`, padding:"10px 18px", flexShrink:0, position:"relative" }}>
-            <div style={{ color:G.mid, fontSize:10, letterSpacing:3, marginBottom:4 }}>◈ BRIEFING — {stage.title}</div>
-            <div style={{ color:G.text, fontSize:12, lineHeight:1.7 }}>{stage.nar}</div>
-            {stage.goal && <div style={{ marginTop:8, color:G.green, fontSize:12, lineHeight:1.6, borderLeft:`2px solid ${G.green}`, paddingLeft:10 }}><span style={{ color:G.dim, letterSpacing:2, fontSize:10 }}>MISSION  </span>{stage.goal}</div>}
-            <button onClick={() => setShowBrief(false)} style={{ position:"absolute", top:8, right:12, background:"transparent", border:"none", color:G.dim, cursor:"pointer", fontSize:18, lineHeight:1 }}>×</button>
-          </div>
-        )}
-
-        {/* output */}
-        <div ref={termRef} onClick={() => inputRef.current?.focus()}
-          style={{ flex:1, overflowY:"auto", padding:"10px 16px", background:G.term, cursor:"text" }}>
-          {history.map((e, i) => {
-            if (e.type === "sys") return <div key={i} style={{ color:G.mid, whiteSpace:"pre-wrap", marginBottom:8 }}>{e.text}</div>;
-            if (e.type === "out") return <div key={i} style={{ color:G.text, whiteSpace:"pre-wrap", lineHeight:1.6, marginBottom:4 }}>{e.text}</div>;
-            if (e.type === "done") return (
-              <div key={i} style={{ margin:"14px 0", padding:"14px 16px", border:`1px solid ${G.green}`, background:"#050f05" }}>
-                <div style={{ color:G.green, fontWeight:"bold", letterSpacing:2, marginBottom:8 }}>✓ STAGE COMPLETE</div>
-                <div style={{ color:G.text, whiteSpace:"pre-wrap", lineHeight:1.8 }}>{e.text}</div>
-                {e.learned && (
-                  <div style={{ marginTop:12, paddingTop:12, borderTop:`1px solid ${G.border}` }}>
-                    <div style={{ color:"#ffd24a", fontSize:10, letterSpacing:3, marginBottom:6 }}>✦ WHAT YOU LEARNED</div>
-                    <div style={{ color:"#cfe8cf", whiteSpace:"pre-wrap", lineHeight:1.75, fontSize:12.5 }}>{e.learned}</div>
-                  </div>
-                )}
+      {/* terminal */}
+      <div ref={termRef} onClick={() => inputRef.current?.focus()}
+        style={{ flex:1, overflowY:"auto", padding:"12px 18px", background:G.term, cursor:"text" }}>
+        {history.map((e, i) => {
+          if (e.type === "sys") return <div key={i} style={{ color:G.mid, whiteSpace:"pre-wrap", marginBottom:10, lineHeight:1.55 }}>{e.text}</div>;
+          if (e.type === "out") return <div key={i} style={{ color:G.text, whiteSpace:"pre-wrap", lineHeight:1.6, marginBottom:4 }}>{e.text}</div>;
+          return (
+            <div key={i} style={{ marginBottom:6 }}>
+              <div style={{ color:G.green }}>
+                <span style={{ color:G.dim }}>{(e.cwd||"/home/stranger").replace("/home/stranger","~")}</span>
+                <span style={{ color: e.user==="root"?"#ff6b6b":"#2a8a2a" }}>{e.user==="root"?" # ":" $ "}</span>
+                {e.cmd}
               </div>
-            );
-            return (
-              <div key={i} style={{ marginBottom:6 }}>
-                <div style={{ color:G.green }}>
-                  <span style={{ color:G.dim }}>{(e.cwd||"/home/stranger").replace("/home/stranger","~")}</span>
-                  <span style={{ color: e.user==="root"?"#ff6b6b":"#2a8a2a" }}>{e.user==="root"?" # ":" $ "}</span>
-                  {e.cmd}
-                </div>
-                {e.output && <div style={{ color:G.text, whiteSpace:"pre-wrap", paddingLeft:2, lineHeight:1.6, marginTop:2 }}>{e.output}</div>}
-              </div>
-            );
-          })}
-          {/* input line */}
-          <div style={{ display:"flex", alignItems:"center", marginTop:4 }}>
-            {masked
-              ? <span style={{ color:G.mid, flexShrink:0 }}>Password:&nbsp;</span>
-              : <>
-                  <span style={{ color:G.dim, flexShrink:0 }}>{cwd.replace("/home/stranger","~")}</span>
-                  <span style={{ color: sessRef.current?.user==="root"?"#ff6b6b":"#2a8a2a", flexShrink:0 }}>{sessRef.current?.user==="root"?" # ":" $ "}</span>
-                </>}
-            <input ref={inputRef} value={input} type={masked?"password":"text"} onChange={e=>setInput(e.target.value)} onKeyDown={handleKey}
-              style={{ flex:1, background:"transparent", border:"none", outline:"none", color:G.green, fontFamily:"'Courier New',monospace", fontSize:13, caretColor:G.green, minWidth:0 }}
-              autoFocus spellCheck={false} autoComplete="off" autoCorrect="off" />
-          </div>
+              {e.output && <div style={{ color:G.text, whiteSpace:"pre-wrap", paddingLeft:2, lineHeight:1.6, marginTop:2 }}>{e.output}</div>}
+            </div>
+          );
+        })}
+        {/* input line */}
+        <div style={{ display:"flex", alignItems:"center", marginTop:4 }}>
+          {masked
+            ? <span style={{ color:G.mid, flexShrink:0 }}>Password:&nbsp;</span>
+            : <>
+                <span style={{ color:G.dim, flexShrink:0 }}>{cwd.replace("/home/stranger","~")}</span>
+                <span style={{ color: sessRef.current?.user==="root"?"#ff6b6b":"#2a8a2a", flexShrink:0 }}>{sessRef.current?.user==="root"?" # ":" $ "}</span>
+              </>}
+          <input ref={inputRef} value={input} type={masked?"password":"text"} onChange={e=>setInput(e.target.value)} onKeyDown={handleKey}
+            style={{ flex:1, background:"transparent", border:"none", outline:"none", color:G.green, fontFamily:"'Courier New',monospace", fontSize:13, caretColor:G.green, minWidth:0 }}
+            autoFocus spellCheck={false} autoComplete="off" autoCorrect="off" />
         </div>
       </div>
 
-      {/* SIDEBAR */}
-      <div style={{ width:270, borderLeft:`1px solid ${G.border}`, background:G.panel, display:"flex", flexDirection:"column", overflow:"hidden" }}>
-        {/* chapter info */}
-        <div style={{ padding:"12px 14px", borderBottom:`1px solid ${G.border}`, flexShrink:0 }}>
-          <div style={{ color:G.dim, fontSize:10, letterSpacing:3, marginBottom:3 }}>CH {chapter.id} OF {CHAPTERS.length}</div>
-          <div style={{ color:chapter.color||G.green, fontWeight:"bold", fontSize:12, letterSpacing:1 }}>{chapter.icon} {chapter.title}</div>
-          <div style={{ color:G.mid, fontSize:11, marginTop:2 }}>{chapter.zone}</div>
-          <div style={{ marginTop:8, background:"#0a110a", height:3, borderRadius:2 }}>
-            <div style={{ width:`${pct}%`, height:"100%", background:G.green, borderRadius:2, transition:"width 0.4s" }} />
+      {/* achievement toasts */}
+      <div style={{ position:"fixed", top:54, right:16, zIndex:40, display:"flex", flexDirection:"column", gap:8, pointerEvents:"none" }}>
+        {toasts.map(t => (
+          <div key={t.id} style={{ background:"#07140a", border:"1px solid #00ff41", padding:"9px 14px", minWidth:230,
+            boxShadow:"0 0 22px rgba(0,255,65,0.25)", animation:"toastIn .35s ease both" }}>
+            <div style={{ color:"#ffd24a", fontSize:9, letterSpacing:3, marginBottom:2 }}>✦ ACHIEVEMENT UNLOCKED</div>
+            <div style={{ color:"#a8cca8", fontSize:13, letterSpacing:0.5 }}>{t.name}</div>
           </div>
-          <div style={{ color:G.dim, fontSize:10, marginTop:3 }}>{pct}% complete</div>
-        </div>
-
-        {/* scrollable section */}
-        <div style={{ flex:1, overflowY:"auto", padding:"10px 14px" }}>
-          {/* objectives */}
-          <div style={{ color:G.dim, fontSize:10, letterSpacing:3, marginBottom:8 }}>OBJECTIVES</div>
-          {objs.map(o => (
-            <div key={o.id} style={{ display:"flex", gap:8, marginBottom:9, alignItems:"flex-start" }}>
-              <span style={{ color:o.done?G.green:"#1a3a1a", flexShrink:0, fontSize:15, lineHeight:1.2 }}>{o.done?"✓":"○"}</span>
-              <div style={{ color:o.done?G.mid:"#4a7a4a", fontSize:11, lineHeight:1.5, textDecoration:o.done?"line-through":"none" }}>{o.l}</div>
-            </div>
-          ))}
-
-          {/* XP */}
-          <div style={{ marginTop:12, padding:"6px 10px", background:"#0a110a", border:`1px solid ${G.border}`, color:G.dim, fontSize:11 }}>
-            ◆ +50 XP on completion
-          </div>
-
-          {/* hints */}
-          <div style={{ marginTop:14 }}>
-            <div style={{ color:G.dim, fontSize:10, letterSpacing:3, marginBottom:8 }}>HINTS ({hintsUsed.length}/{stage?.hints?.length||0})</div>
-            {(stage?.hints||[]).map((h, i) => (
-              <div key={i} style={{ marginBottom:7 }}>
-                {hintsUsed.includes(i)
-                  ? <div style={{ color:"#4a7a4a", fontSize:11, lineHeight:1.5, padding:"7px 9px", background:"#0a110a", border:`1px solid ${G.border}` }}>{h}</div>
-                  : <button onClick={() => setHintsUsed(u => [...u, i])}
-                      style={{ width:"100%", textAlign:"left", background:"transparent", border:`1px solid ${G.border}`, color:G.dim, fontFamily:"'Courier New',monospace", fontSize:11, padding:"5px 9px", cursor:"pointer", letterSpacing:1 }}
-                      onMouseEnter={e=>e.currentTarget.style.borderColor="#1a3a1a"}
-                      onMouseLeave={e=>e.currentTarget.style.borderColor=G.border}>
-                      ▷ HINT {i+1}
-                    </button>
-                }
-              </div>
-            ))}
-          </div>
-
-          {/* next stage */}
-          {stageDone && (
-            <div style={{ marginTop:16 }}>
-              {(chIdx < CHAPTERS.length-1 || stIdx < chapter.stages.length-1) ? (
-                <button onClick={nextStage}
-                  style={{ width:"100%", background:"#001a00", border:`1px solid ${G.green}`, color:G.green, fontFamily:"'Courier New',monospace", fontSize:11, padding:"11px", cursor:"pointer", letterSpacing:2, fontWeight:"bold" }}
-                  onMouseEnter={e=>e.currentTarget.style.background="#002800"}
-                  onMouseLeave={e=>e.currentTarget.style.background="#001a00"}>
-                  NEXT STAGE →
-                </button>
-              ) : (
-                <div style={{ color:G.green, textAlign:"center", padding:10, border:`1px solid ${G.green}`, fontSize:11, letterSpacing:1 }}>
-                  ★ ALL STAGES COMPLETE ★
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* chapter map */}
-          <div style={{ marginTop:20 }}>
-            <div style={{ color:G.dim, fontSize:10, letterSpacing:3, marginBottom:8 }}>CHAPTER MAP</div>
-            {CHAPTERS.map((ch, ci) => (
-              <div key={ch.id} style={{ display:"flex", alignItems:"center", gap:6, marginBottom:5, opacity: ci > chIdx ? 0.3 : 1 }}>
-                <span style={{ color: ci < chIdx ? G.green : ci === chIdx ? ch.color||G.green : G.dim, fontSize:12 }}>
-                  {ci < chIdx ? "✓" : ci === chIdx ? "►" : "○"}
-                </span>
-                <span style={{ color: ci === chIdx ? (ch.color||G.green) : ci < chIdx ? G.mid : G.dim, fontSize:10 }}>
-                  {ch.title}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* briefing toggle */}
-          {!showBrief && (
-            <button onClick={() => setShowBrief(true)}
-              style={{ marginTop:12, width:"100%", background:"transparent", border:`1px solid ${G.border}`, color:G.dim, fontFamily:"'Courier New',monospace", fontSize:11, padding:"5px", cursor:"pointer" }}>
-              ▷ SHOW BRIEFING
-            </button>
-          )}
-        </div>
+        ))}
       </div>
+
+      {showTrophies && <TrophyCase unlocked={unlockedRef.current} onClose={() => { setShowTrophies(false); setTimeout(()=>inputRef.current?.focus(),30); }} />}
 
       <style>{`
         *{box-sizing:border-box;}
@@ -2978,6 +3228,7 @@ export default function App() {
         ::-webkit-scrollbar-thumb{background:#1a3a1a;}
         input::placeholder{color:#1a4d1a;}
         button:disabled{opacity:0.4;cursor:not-allowed;}
+        @keyframes toastIn{from{opacity:0;transform:translateX(24px);}to{opacity:1;transform:none;}}
       `}</style>
     </div>
   );
