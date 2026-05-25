@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Kali Prison
+GenericName=Linux Escape Game
+Comment=Trapped in a machine with only a terminal. Find the way out.
+Exec=bash "__INSTALL_DIR__/run.sh"
+Icon=__INSTALL_DIR__/assets/icon.png
+Terminal=false
+Categories=Game;Education;
+StartupWMClass=KaliPrison

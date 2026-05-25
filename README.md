@@ -49,17 +49,41 @@ There are **50+ hidden achievements**. You can't see them as a to-do list — th
 ## Play
 
 ```bash
-# Option 1 — one-liner (installs or updates automatically)
+# Option 1 — one-liner (installs or updates, adds a desktop icon, launches it)
 bash <(curl -fsSL https://raw.githubusercontent.com/the-priest/kaliprison/main/install.sh)
 
 # Option 2 — git clone
 git clone https://github.com/the-priest/kaliprison.git
 cd kaliprison
-open index.html          # macOS
-xdg-open index.html      # Linux
+bash run.sh              # opens in its OWN app window — no browser tabs
 ```
 
+`install.sh` registers a **Kali Prison** entry in your Applications menu and on your
+Desktop. The icon runs `run.sh`, which opens the game in a **standalone app window**
+(Chromium `--app` mode): no tabs, no address bar — it looks and behaves like its own
+program. If you only have Firefox it opens a clean dedicated window instead; install
+Chromium (`sudo apt install chromium`) for the full tab-free app experience.
+
 Progress (achievements + XP) saves automatically to your browser's localStorage.
+
+### Updating — and the "I updated but it shows the old version" fix
+
+This is almost always a **cache** problem, not a code problem: your icon opens a local
+file, and the browser may serve a cached copy. The fix is built in:
+
+```bash
+bash install.sh          # pulls the latest AND clears the cached app profile
+```
+
+Running `install.sh` again wipes the `.profile` cache directory so the new build is
+forced to load. The shipped `index.html` also sends no-cache headers. If you launched
+the game another way and still see the old version, clear it manually:
+
+```bash
+rm -rf kaliprison/.profile
+```
+
+then relaunch. That guarantees a fresh load.
 
 ---
 
@@ -82,15 +106,18 @@ npm run build        # transpile JSX + assemble into index.html
 ```
 kaliprison/
 ├── index.html          # the game — open this (generated, self-contained)
+├── run.sh              # launches the game in its own app window (no tabs)
+├── install.sh          # installer / updater (adds desktop icon, clears cache)
+├── kaliprison.desktop  # Applications-menu / Desktop entry (paths set on install)
 ├── src/
 │   └── trapped.jsx     # everything: Linux engine + V's trail + achievements + UI
 ├── build/
-│   ├── build.js        # transpile JSX → app.bundle.js
-│   ├── assemble.js     # inline bundle → index.html
+│   ├── build.js        # transpile JSX -> app.bundle.js
+│   ├── assemble.js     # inline bundle -> index.html
 │   └── package.json
 ├── assets/
-│   └── trapped.svg     # the dragon emblem
-├── install.sh          # smart installer / updater
+│   ├── trapped.svg     # the dragon emblem (source)
+│   └── icon.png        # app icon used by the desktop entry
 ├── LICENSE
 └── README.md
 ```
