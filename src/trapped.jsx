@@ -2527,45 +2527,204 @@ function checkObjectives(objs, cmd, output, sess, fs) {
 // ─────────────────────────────────────────────────────────
 // ESCAPE SCREEN
 // ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────
+// GLOBAL STYLES injected once into <head>
+// ─────────────────────────────────────────────────────────
+const GLOBAL_CSS = `
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { height: 100%; background: #030603; }
+
+/* phosphor CRT cursor */
+:root {
+  --green:  #00ff41;
+  --green2: #39a139;
+  --green3: #1a4d1a;
+  --green4: #0d2a0d;
+  --dim:    #0f2d0f;
+  --text:   #a8cca8;
+  --border: #172217;
+  --amber:  #ffd24a;
+  --red:    #ff4444;
+  --bg:     #030603;
+  --panel:  #060a06;
+  --mono:   'JetBrains Mono', 'Courier New', monospace;
+}
+
+/* custom scrollbar */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--green3); border-radius: 2px; }
+
+/* CRT scanline overlay */
+.crt-lines {
+  pointer-events: none;
+  position: fixed; inset: 0; z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px, transparent 2px,
+    rgba(0,0,0,0.18) 2px, rgba(0,0,0,0.18) 3px
+  );
+}
+/* vignette */
+.crt-vignette {
+  pointer-events: none;
+  position: fixed; inset: 0; z-index: 9998;
+  background: radial-gradient(ellipse at center,
+    transparent 55%, rgba(0,0,0,0.75) 100%
+  );
+}
+
+/* phosphor glow on text */
+.glow { text-shadow: 0 0 8px var(--green), 0 0 18px rgba(0,255,65,0.35); }
+.glow-sm { text-shadow: 0 0 6px rgba(0,255,65,0.5); }
+
+/* flicker */
+@keyframes flicker {
+  0%,94%,96%,100% { opacity: 1; }
+  95% { opacity: 0.82; }
+}
+@keyframes blink { 50% { opacity: 0; } }
+@keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes scanDown {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+@keyframes toastIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:none; } }
+@keyframes toastOut { from { opacity:1; transform:none; } to { opacity:0; transform:translateX(20px); } }
+@keyframes dragonPulse {
+  0%,100% { filter: drop-shadow(0 0 10px var(--green)); }
+  50%      { filter: drop-shadow(0 0 24px var(--green)) drop-shadow(0 0 40px rgba(0,255,65,0.3)); }
+}
+@keyframes escGlow {
+  0%,100% { text-shadow: 0 0 12px var(--green), 0 0 30px rgba(0,255,65,0.4); }
+  50%      { text-shadow: 0 0 24px var(--green), 0 0 60px rgba(0,255,65,0.7), 0 0 100px rgba(0,255,65,0.3); }
+}
+@keyframes typeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+input, button { font-family: var(--mono); }
+button { cursor: pointer; transition: all 0.12s ease; }
+`;
+
+function injectGlobalCSS() {
+  if (document.getElementById("kp-global")) return;
+  const el = document.createElement("style");
+  el.id = "kp-global";
+  el.textContent = GLOBAL_CSS;
+  document.head.appendChild(el);
+}
+
+// ─────────────────────────────────────────────────────────
+// ESCAPE SCREEN — cinematic ending
+// ─────────────────────────────────────────────────────────
 function EscapeScreen({ xp, unlockedCount, totalCount, onReset }) {
-  const C = "#00ff41";
+  const [phase, setPhase] = useState(0);
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase(1), 400);
+    const t2 = setTimeout(() => setPhase(2), 1400);
+    const t3 = setTimeout(() => setPhase(3), 2600);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, []);
+
   return (
-    <div style={{ minHeight:"100vh", background:"#050805", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:"'Courier New',monospace", padding:24, color:C }}>
-      <pre style={{ color:C, fontSize:11, lineHeight:1.3, textAlign:"center", textShadow:`0 0 20px ${C}` }}>{`
-████████╗██╗  ██╗███████╗    ███████╗███████╗ ██████╗ █████╗ ██████╗ ███████╗
-╚══██╔══╝██║  ██║██╔════╝    ██╔════╝██╔════╝██╔════╝██╔══██╗██╔══██╗██╔════╝
-   ██║   ███████║█████╗      ███████╗██║     ██║     ███████║██████╔╝█████╗
-   ██║   ██╔══██║██╔══╝      ╚════██║██║     ██║     ██╔══██║██╔═══╝ ██╔══╝
-   ██║   ██║  ██║███████╗    ███████║╚██████╗╚██████╗██║  ██║██║     ███████╗
-   ╚═╝   ╚═╝  ╚═╝╚══════╝    ╚══════╝ ╚═════╝ ╚═════╝╚═╝  ╚═╝╚═╝     ╚══════╝`}</pre>
-      <div style={{ marginTop:30, maxWidth:680, width:"100%", color:"#a8cca8", lineHeight:1.9, fontSize:13 }}>
-        <div style={{ color:C, marginBottom:18, fontSize:14 }}>
-          You woke up inside a machine called AXIOM-KALI.<br/>
-          You had nothing but a black screen and a blinking cursor.<br/>
-          You couldn't even read a file when you started.<br/><br/>
-          You followed V's trail. You learned to see, to move, to read what was hidden.<br/>
-          You decoded the first piece. You dug the second out of a lie. You became root<br/>
-          and took the third. You assembled the key — and you walked out the door.
-        </div>
-        <div style={{ marginTop:22, color:"#1a6b1a", borderTop:"1px solid #1a3a1a", paddingTop:22 }}>
-          <span style={{ color:C }}>{unlockedCount}</span> of {totalCount} hidden achievements found
-          &nbsp;·&nbsp; <span style={{ color:C }}>{xp}</span> XP
-          <br/><br/>
-          The tunnel collapsed behind you. AXIOM never saw the door.<br/>
-          On the far side of the firewall, a second signature was already waiting.<br/><br/>
-          <span style={{ color:C }}>"You made it. I knew you would. — V"</span><br/><br/>
-          You're out. And now you know how.
-        </div>
-        <button onClick={onReset} style={{ marginTop:24, background:"transparent", border:"1px solid #1a4d1a", color:"#1a6b1a", fontFamily:"'Courier New',monospace", fontSize:12, padding:"10px 24px", cursor:"pointer", letterSpacing:2 }}>
-          ▶ MAIN MENU
-        </button>
+    <div style={{
+      minHeight:"100vh", background:"#020402",
+      display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+      fontFamily:"var(--mono)", padding:32, overflow:"hidden", position:"relative"
+    }}>
+      <div className="crt-lines" />
+      <div className="crt-vignette" />
+
+      {/* animated scan line */}
+      <div style={{
+        position:"absolute", top:0, left:0, right:0, height:"2px",
+        background:"linear-gradient(90deg, transparent, rgba(0,255,65,0.6), transparent)",
+        animation:"scanDown 2.4s linear forwards",
+        pointerEvents:"none", zIndex:10
+      }} />
+
+      <div style={{ position:"relative", zIndex:5, maxWidth:680, width:"100%", textAlign:"center" }}>
+        {phase >= 1 && (
+          <pre style={{
+            color:"var(--green)", fontSize:"clamp(8px,1.6vw,13px)", lineHeight:1.2,
+            animation:"escGlow 2.5s ease-in-out infinite, fadeUp 0.6s both",
+            marginBottom:32, letterSpacing:2
+          }}>{`
+ ██████╗ ██████╗ ███████╗███████╗██████╗  ██████╗ ███╗   ███╗
+ ██╔══██╗██╔══██╗██╔════╝██╔════╝██╔══██╗██╔═══██╗████╗ ████║
+ ███████║██████╔╝█████╗  █████╗  ██║  ██║██║   ██║██╔████╔██║
+ ██╔══██║██╔══██╗██╔══╝  ██╔══╝  ██║  ██║██║   ██║██║╚██╔╝██║
+ ██║  ██║██║  ██║███████╗███████╗██████╔╝╚██████╔╝██║ ╚═╝ ██║
+ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝╚═════╝  ╚═════╝ ╚═╝     ╚═╝`}</pre>
+        )}
+
+        {phase >= 2 && (
+          <div style={{
+            color:"var(--text)", lineHeight:1.85, fontSize:14,
+            animation:"fadeUp 0.7s 0.1s both"
+          }}>
+            You woke up inside a machine called AXIOM-KALI.<br/>
+            You had nothing but a black screen and a blinking cursor.<br/>
+            You couldn't even read a file when you started.<br/><br/>
+            <span style={{ color:"var(--green)", fontWeight:700 }}>
+              You followed V's trail. You learned to see, to move, to read what was hidden.
+            </span><br/>
+            You decoded the first piece. You dug the second out of a lie.<br/>
+            You became root and took the third. You assembled the key —<br/>
+            and you walked out the door.
+          </div>
+        )}
+
+        {phase >= 3 && (
+          <div style={{
+            marginTop:36, animation:"fadeUp 0.7s both",
+            border:"1px solid var(--green3)", padding:"22px 28px",
+            background:"rgba(0,255,65,0.03)"
+          }}>
+            <div style={{ display:"flex", justifyContent:"center", gap:36, marginBottom:20 }}>
+              <div style={{ textAlign:"center" }}>
+                <div style={{ color:"var(--green)", fontSize:28, fontWeight:700 }} className="glow">{unlockedCount}</div>
+                <div style={{ color:"var(--green3)", fontSize:10, letterSpacing:2 }}>of {totalCount} achievements</div>
+              </div>
+              <div style={{ width:1, background:"var(--border)" }} />
+              <div style={{ textAlign:"center" }}>
+                <div style={{ color:"var(--amber)", fontSize:28, fontWeight:700 }}>{xp}</div>
+                <div style={{ color:"var(--green3)", fontSize:10, letterSpacing:2 }}>XP earned</div>
+              </div>
+            </div>
+
+            <div style={{ color:"var(--green3)", fontSize:13, lineHeight:1.8 }}>
+              The tunnel collapsed behind you. AXIOM never saw the door.<br/>
+              On the far side of the firewall, a second signature was already waiting.<br/><br/>
+              <span style={{ color:"var(--green)", fontStyle:"italic" }}>
+                "You made it. I knew you would. — V"
+              </span>
+            </div>
+
+            <button onClick={onReset} style={{
+              marginTop:24, background:"transparent",
+              border:"1px solid var(--green3)", color:"var(--green2)",
+              padding:"10px 28px", fontSize:11, letterSpacing:3,
+            }}
+              onMouseEnter={e=>{ e.target.style.background="var(--green)"; e.target.style.color="#020402"; }}
+              onMouseLeave={e=>{ e.target.style.background="transparent"; e.target.style.color="var(--green2)"; }}
+            >
+              ▶ MAIN MENU
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────
-// DRAGON EMBLEM  (original art, phosphor-green)
+// DRAGON EMBLEM
 // ─────────────────────────────────────────────────────────
 const DRAGON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
 <defs><filter id="dg" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
@@ -2579,44 +2738,62 @@ const DRAGON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240
 <path d="M150 122 C172 132 184 156 176 182 C169 204 146 214 124 208 C142 206 156 192 156 174 C156 156 142 146 126 148 C140 136 150 130 150 122 Z"/>
 <path d="M170 138 l18 -5 -11 14 Z"/><path d="M180 166 l18 3 -13 11 Z"/>
 </g>
-<path d="M44 120 L96 117 C92 124 80 128 70 128 L46 126 Z" fill="#050805"/>
-<circle cx="120" cy="98" r="4.6" fill="#050805"/><circle cx="121" cy="97" r="1.7" fill="#00ff41"/>
+<path d="M44 120 L96 117 C92 124 80 128 70 128 L46 126 Z" fill="#020402"/>
+<circle cx="120" cy="98" r="4.6" fill="#020402"/><circle cx="121" cy="97" r="1.7" fill="#00ff41"/>
 </svg>`;
 const DRAGON_URI = "data:image/svg+xml;utf8," + encodeURIComponent(DRAGON_SVG);
 
 // ─────────────────────────────────────────────────────────
-// GAME OVER  (rm -rf /)
+// GAME OVER
 // ─────────────────────────────────────────────────────────
 function GameOverScreen({ onReset }) {
   return (
-    <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-      background:"radial-gradient(120% 90% at 50% 30%, #1a0303 0%, #0a0000 72%)", color:"#ff3b3b",
-      fontFamily:"'Courier New',monospace", textAlign:"center", padding:24, textShadow:"0 0 18px #ff0000" }}>
-      <div style={{ fontSize:"clamp(40px,12vw,84px)", fontWeight:"bold", letterSpacing:10, lineHeight:1 }}>GAME OVER</div>
-      <div style={{ marginTop:22, maxWidth:540, lineHeight:1.8, color:"#ff8a8a", fontSize:14 }}>
-        You ran <b>rm -rf /</b> on the machine you were trapped inside.<br/>
-        You deleted the floor under your own feet. There is nothing left to escape from.<br/><br/>
-        Your save is gone. Hit the button to wake up in a fresh machine and try again.
+    <div style={{
+      minHeight:"100vh", display:"flex", flexDirection:"column",
+      alignItems:"center", justifyContent:"center",
+      background:"radial-gradient(130% 100% at 50% 30%, #1c0202 0%, #080000 70%)",
+      fontFamily:"var(--mono)", textAlign:"center", padding:32,
+      position:"relative", overflow:"hidden"
+    }}>
+      <div className="crt-lines" />
+      <div className="crt-vignette" />
+
+      <div style={{ position:"relative", zIndex:5 }}>
+        <div style={{
+          fontSize:"clamp(36px,10vw,80px)", fontWeight:700, letterSpacing:12, lineHeight:1,
+          color:"#ff3b3b", textShadow:"0 0 20px #ff0000, 0 0 60px rgba(255,0,0,0.4)",
+          animation:"flicker 3s infinite"
+        }}>GAME OVER</div>
+
+        <div style={{ marginTop:24, maxWidth:520, lineHeight:1.85, color:"#ff8a8a", fontSize:13 }}>
+          You ran <span style={{ color:"#ff5555", fontWeight:700 }}>rm -rf /</span> on the machine you were trapped inside.<br/>
+          You deleted the floor under your own feet.<br/>
+          There is nothing left to escape from.<br/><br/>
+          Your save is gone. Wake up in a fresh machine and try again.
+        </div>
+
+        <button onClick={onReset} style={{
+          marginTop:28, background:"transparent",
+          border:"1px solid #b33", color:"#ff8a8a",
+          padding:"11px 28px", fontSize:11, letterSpacing:3,
+        }}
+          onMouseEnter={e=>{ e.target.style.background="#ff3b3b"; e.target.style.color="#080000"; }}
+          onMouseLeave={e=>{ e.target.style.background="transparent"; e.target.style.color="#ff8a8a"; }}
+        >
+          ▶ WAKE UP AGAIN
+        </button>
       </div>
-      <button onClick={onReset} style={{ marginTop:28, background:"transparent", border:"1px solid #b33", color:"#ff8a8a",
-        fontFamily:"'Courier New',monospace", fontSize:12, letterSpacing:2, padding:"10px 26px", cursor:"pointer" }}>
-        ▶ WAKE UP AGAIN (MAIN MENU)
-      </button>
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────
-// HIDDEN ACHIEVEMENTS  (Steam-style: invisible until you do the thing)
-//   Each: { key, name, cat, fn(cmd, output, sess, fs) -> bool }
-//   They are NEVER shown as a to-do list. They pop a toast on first unlock
-//   and live in a trophy case you can open — locked ones stay "???".
+// ACHIEVEMENTS
 // ─────────────────────────────────────────────────────────
 const ROOT_PW_STR = "R3dDr@g0n_2021";
 function _lc(s){ return (s||"").toLowerCase(); }
 
 const ACHIEVEMENTS = [
-  // ORIENTATION — the absolute basics, fired the first time you do them
   { key:"a_whoami",  cat:"ORIENTATION", name:"Who Am I?",            fn:(c)=>c==="whoami" },
   { key:"a_ls",      cat:"ORIENTATION", name:"Eyes Open",            fn:(c)=>/^ls(\s|$)/.test(c) },
   { key:"a_pwd",     cat:"ORIENTATION", name:"You Are Here",         fn:(c)=>c==="pwd" },
@@ -2625,7 +2802,6 @@ const ACHIEVEMENTS = [
   { key:"a_cd",      cat:"ORIENTATION", name:"Wanderer",             fn:(c)=>/^cd(\s|$)/.test(c) },
   { key:"a_deep",    cat:"ORIENTATION", name:"Down the Rabbit Hole", fn:(c,o,s)=>s && (s.cwd==="/"||(s.cwd&&s.cwd.split("/").filter(Boolean).length>=3)) },
 
-  // V'S TRAIL — the story spine. The satisfying beats.
   { key:"v_voice",   cat:"V'S TRAIL", name:"V Speaks",               fn:(c)=>/^cat\s/.test(c)&&c.includes("from_V") },
   { key:"v_follow",  cat:"V'S TRAIL", name:"Following the Trail",    fn:(c)=>/^cat\s/.test(c)&&/\.v1(\s|$)/.test(c) },
   { key:"v_plan",    cat:"V'S TRAIL", name:"The Plan",               fn:(c)=>/^cat\s/.test(c)&&/\.v2(\s|$)/.test(c) },
@@ -2639,66 +2815,55 @@ const ACHIEVEMENTS = [
   { key:"v_p3",      cat:"V'S TRAIL", name:"Piece Three",            fn:(c,o)=>o&&o.includes("FR3:_out") },
   { key:"v_final",   cat:"V'S TRAIL", name:"V's Last Word",          fn:(c)=>/^cat\s/.test(c)&&c.includes(".v_final") },
 
-  // SHELL CRAFT — real Linux fundamentals
-  { key:"s_grep",  cat:"SHELL CRAFT", name:"Grep Master",     fn:(c)=>/^grep\s/.test(c)||c.includes("| grep")||c.includes("|grep") },
-  { key:"s_find",  cat:"SHELL CRAFT", name:"Seek and Find",   fn:(c)=>/^find\s/.test(c) },
+  { key:"s_grep",  cat:"SHELL CRAFT", name:"Grep Master",        fn:(c)=>/^grep\s/.test(c)||c.includes("| grep")||c.includes("|grep") },
+  { key:"s_find",  cat:"SHELL CRAFT", name:"Seek and Find",      fn:(c)=>/^find\s/.test(c) },
   { key:"s_chmod", cat:"SHELL CRAFT", name:"Permission Granted", fn:(c)=>/^chmod\s/.test(c) },
-  { key:"s_write", cat:"SHELL CRAFT", name:"Scribe",          fn:(c)=>c.includes("echo")&&c.includes(">") },
-  { key:"s_rm",    cat:"SHELL CRAFT", name:"Destroyer",       fn:(c)=>/^rm\s/.test(c)&&!c.includes(" /") },
+  { key:"s_write", cat:"SHELL CRAFT", name:"Scribe",             fn:(c)=>c.includes("echo")&&c.includes(">") },
+  { key:"s_rm",    cat:"SHELL CRAFT", name:"Destroyer",          fn:(c)=>/^rm\s/.test(c)&&!c.includes(" /") },
 
-  // RECON
-  { key:"r_ping",  cat:"RECON", name:"Knock Knock",       fn:(c)=>/^ping\s/.test(c) },
-  { key:"r_nmap",  cat:"RECON", name:"Port Knocker",      fn:(c)=>c.includes("nmap") },
-  { key:"r_deep",  cat:"RECON", name:"Deep Scan",         fn:(c)=>c.includes("nmap")&&(c.includes("-sv")||_lc(c).includes("-sv")||c.includes("-A")||c.includes("-sC")||_lc(c).includes("-sc")) },
-  { key:"r_dns",   cat:"RECON", name:"DNS Digger",        fn:(c)=>/^dig\s/.test(c)||/^nslookup\b/.test(c)||/^host\s/.test(c)||c.includes("dnsenum")||c.includes("dnsrecon") },
-  { key:"r_web",   cat:"RECON", name:"Web Walker",        fn:(c)=>/^curl\s/.test(c)||/^wget\s/.test(c) },
-  { key:"r_sniff", cat:"RECON", name:"Traffic Watcher",   fn:(c)=>c.includes("tcpdump")||c.includes("wireshark")||c.includes("tshark") },
+  { key:"r_ping",  cat:"RECON", name:"Knock Knock",     fn:(c)=>/^ping\s/.test(c) },
+  { key:"r_nmap",  cat:"RECON", name:"Port Knocker",    fn:(c)=>c.includes("nmap") },
+  { key:"r_deep",  cat:"RECON", name:"Deep Scan",       fn:(c)=>c.includes("nmap")&&(c.includes("-sv")||_lc(c).includes("-sv")||c.includes("-A")||c.includes("-sC")||_lc(c).includes("-sc")) },
+  { key:"r_dns",   cat:"RECON", name:"DNS Digger",      fn:(c)=>/^dig\s/.test(c)||/^nslookup\b/.test(c)||/^host\s/.test(c)||c.includes("dnsenum")||c.includes("dnsrecon") },
+  { key:"r_web",   cat:"RECON", name:"Web Walker",      fn:(c)=>/^curl\s/.test(c)||/^wget\s/.test(c) },
+  { key:"r_sniff", cat:"RECON", name:"Traffic Watcher", fn:(c)=>c.includes("tcpdump")||c.includes("wireshark")||c.includes("tshark") },
 
-  // WEB ATTACKS
-  { key:"w_sqli",  cat:"WEB ATTACKS", name:"Injector",        fn:(c,o)=>c.includes("sqlmap")||(o&&o.includes("SQL INJECTION")) },
-  { key:"w_xss",   cat:"WEB ATTACKS", name:"Cross-Site",      fn:(c,o)=>_lc(c).includes("<script>")||(o&&(o.includes("XSS")||o.includes("REFLECTED")||o.includes("STORED"))) },
-  { key:"w_lfi",   cat:"WEB ATTACKS", name:"Traversal",       fn:(c,o)=>(c.includes("../")&&_lc(c).includes("etc/passwd"))||(o&&o.includes("LFI")) },
-  { key:"w_ci",    cat:"WEB ATTACKS", name:"Command Chain",   fn:(c)=>c.includes("; id")||c.includes(";id") },
+  { key:"w_sqli",  cat:"WEB ATTACKS", name:"Injector",   fn:(c,o)=>c.includes("sqlmap")||(o&&o.includes("SQL INJECTION")) },
+  { key:"w_xss",   cat:"WEB ATTACKS", name:"Cross-Site", fn:(c,o)=>_lc(c).includes("<script>")||(o&&(o.includes("XSS")||o.includes("REFLECTED")||o.includes("STORED"))) },
+  { key:"w_lfi",   cat:"WEB ATTACKS", name:"Traversal",  fn:(c,o)=>(c.includes("../")&&_lc(c).includes("etc/passwd"))||(o&&o.includes("LFI")) },
+  { key:"w_ci",    cat:"WEB ATTACKS", name:"Command Chain", fn:(c)=>c.includes("; id")||c.includes(";id") },
 
-  // EXPLOITATION
-  { key:"e_msf",   cat:"EXPLOITATION", name:"The Framework",  fn:(c)=>c.includes("msfconsole") },
-  { key:"e_venom", cat:"EXPLOITATION", name:"Payload Smith",  fn:(c)=>c.includes("msfvenom") },
-  { key:"e_shell", cat:"EXPLOITATION", name:"Shell Caller",   fn:(c,o)=>(c.includes("nc ")&&(c.includes("-e")||c.includes("-lvnp")||c.includes("4444")))||c.includes("bash -i")||(o&&(o.includes("Meterpreter session")||o.includes("reverse shell")||o.includes("session opened"))) },
+  { key:"e_msf",   cat:"EXPLOITATION", name:"The Framework", fn:(c)=>c.includes("msfconsole") },
+  { key:"e_venom", cat:"EXPLOITATION", name:"Payload Smith", fn:(c)=>c.includes("msfvenom") },
+  { key:"e_shell", cat:"EXPLOITATION", name:"Shell Caller",  fn:(c,o)=>(c.includes("nc ")&&(c.includes("-e")||c.includes("-lvnp")||c.includes("4444")))||c.includes("bash -i")||(o&&(o.includes("Meterpreter session")||o.includes("reverse shell")||o.includes("session opened"))) },
 
-  // PRIVILEGE ESCALATION
-  { key:"p_sudo",  cat:"PRIVILEGE ESCALATION", name:"Sudo Sleuth",   fn:(c)=>c.includes("sudo -l") },
-  { key:"p_suid",  cat:"PRIVILEGE ESCALATION", name:"SUID Hunter",   fn:(c)=>c.includes("find")&&c.includes("-perm")&&(c.includes("4000")||c.includes("u=s")||c.includes("u+s")) },
-  { key:"p_crack", cat:"PRIVILEGE ESCALATION", name:"Hashcracker",   fn:(c)=>c.includes("hashcat")||/^john\b/.test(c)||c.includes(" john ") },
-  { key:"p_shadow",cat:"PRIVILEGE ESCALATION", name:"Credential Harvest", fn:(c)=>/^cat\s/.test(c)&&(c.includes("shadow")||c.includes("config.php")||c.includes(".vault")) },
+  { key:"p_sudo",  cat:"PRIVILEGE ESCALATION", name:"Sudo Sleuth",       fn:(c)=>c.includes("sudo -l") },
+  { key:"p_suid",  cat:"PRIVILEGE ESCALATION", name:"SUID Hunter",       fn:(c)=>c.includes("find")&&c.includes("-perm")&&(c.includes("4000")||c.includes("u=s")||c.includes("u+s")) },
+  { key:"p_crack", cat:"PRIVILEGE ESCALATION", name:"Hashcracker",       fn:(c)=>c.includes("hashcat")||/^john\b/.test(c)||c.includes(" john ") },
+  { key:"p_shadow",cat:"PRIVILEGE ESCALATION", name:"Credential Harvest",fn:(c)=>/^cat\s/.test(c)&&(c.includes("shadow")||c.includes("config.php")||c.includes(".vault")) },
 
-  // NETWORK ATTACKS
-  { key:"n_arp",   cat:"NETWORK ATTACKS", name:"The Spoofer",   fn:(c)=>c.includes("arpspoof")||c.includes("ettercap")||c.includes("bettercap") },
-  { key:"n_wifi",  cat:"NETWORK ATTACKS", name:"Deauth",        fn:(c)=>c.includes("aireplay")||c.includes("airodump")||c.includes("aircrack")||c.includes("airmon") },
-  { key:"n_poison",cat:"NETWORK ATTACKS", name:"Poisoner",      fn:(c)=>c.includes("responder")||c.includes("dnsspoof")||(c.includes("dns")&&c.includes("spoof")) },
+  { key:"n_arp",   cat:"NETWORK ATTACKS", name:"The Spoofer", fn:(c)=>c.includes("arpspoof")||c.includes("ettercap")||c.includes("bettercap") },
+  { key:"n_wifi",  cat:"NETWORK ATTACKS", name:"Deauth",      fn:(c)=>c.includes("aireplay")||c.includes("airodump")||c.includes("aircrack")||c.includes("airmon") },
+  { key:"n_poison",cat:"NETWORK ATTACKS", name:"Poisoner",    fn:(c)=>c.includes("responder")||c.includes("dnsspoof")||(c.includes("dns")&&c.includes("spoof")) },
 
-  // FORENSICS / DEFENSE
-  { key:"f_log",   cat:"FORENSICS & DEFENSE", name:"Log Detective", fn:(c)=>c.includes("/var/log")&&(/^cat\s/.test(c)||/^tail\b/.test(c)||/^less\b/.test(c)||/^grep\s/.test(c)||c.includes("cat ")) },
-  { key:"f_ipt",   cat:"FORENSICS & DEFENSE", name:"Hardened",      fn:(c)=>c.includes("iptables") },
-  { key:"f_hunt",  cat:"FORENSICS & DEFENSE", name:"Threat Hunter", fn:(c)=>c.includes("ausearch")||(c.includes("grep")&&c.includes("log")) },
+  { key:"f_log",  cat:"FORENSICS & DEFENSE", name:"Log Detective", fn:(c)=>c.includes("/var/log")&&(/^cat\s/.test(c)||/^tail\b/.test(c)||/^less\b/.test(c)||/^grep\s/.test(c)||c.includes("cat ")) },
+  { key:"f_ipt",  cat:"FORENSICS & DEFENSE", name:"Hardened",      fn:(c)=>c.includes("iptables") },
+  { key:"f_hunt", cat:"FORENSICS & DEFENSE", name:"Threat Hunter", fn:(c)=>c.includes("ausearch")||(c.includes("grep")&&c.includes("log")) },
 
-  // ACTIVE DIRECTORY
-  { key:"d_kerb",  cat:"ACTIVE DIRECTORY", name:"Kerberoast",    fn:(c)=>_lc(c).includes("kerberoast")||_lc(c).includes("getuserspn") },
-  { key:"d_dcs",   cat:"ACTIVE DIRECTORY", name:"DCSync",        fn:(c)=>_lc(c).includes("dcsync")||c.includes("secretsdump") },
-  { key:"d_gold",  cat:"ACTIVE DIRECTORY", name:"Golden Ticket", fn:(c)=>_lc(c).includes("golden")||c.includes("ticketer")||_lc(c).includes("mimikatz") },
+  { key:"d_kerb", cat:"ACTIVE DIRECTORY", name:"Kerberoast",    fn:(c)=>_lc(c).includes("kerberoast")||_lc(c).includes("getuserspn") },
+  { key:"d_dcs",  cat:"ACTIVE DIRECTORY", name:"DCSync",        fn:(c)=>_lc(c).includes("dcsync")||c.includes("secretsdump") },
+  { key:"d_gold", cat:"ACTIVE DIRECTORY", name:"Golden Ticket", fn:(c)=>_lc(c).includes("golden")||c.includes("ticketer")||_lc(c).includes("mimikatz") },
 
-  // SECRET — quiet little rewards for the curious
-  { key:"x_curious", cat:"SECRET", name:"Curiosity",        fn:(c)=>c.includes(".vault_v") },
-  { key:"x_man",     cat:"SECRET", name:"RTFM",             fn:(c)=>/^man\s/.test(c)||/^help$/.test(c) },
+  { key:"x_curious", cat:"SECRET", name:"Curiosity",              fn:(c)=>c.includes(".vault_v") },
+  { key:"x_man",     cat:"SECRET", name:"RTFM",                   fn:(c)=>/^man\s/.test(c)||/^help$/.test(c) },
   { key:"x_history", cat:"SECRET", name:"Ghosts of Commands Past", fn:(c)=>/^history$/.test(c)||c.includes("bash_history") },
-  // x_dont (rm -rf /) and x_free (escaped) are unlocked directly in submit().
 ];
 
-const ACH_TOTAL = ACHIEVEMENTS.length + 2; // + "Do Not" + "Freedom" handled in submit
+const ACH_TOTAL = ACHIEVEMENTS.length + 2;
 const ACH_CATS = (() => {
   const order = ["ORIENTATION","V'S TRAIL","SHELL CRAFT","RECON","WEB ATTACKS","EXPLOITATION","PRIVILEGE ESCALATION","NETWORK ATTACKS","FORENSICS & DEFENSE","ACTIVE DIRECTORY","SECRET"];
   const map = {};
   ACHIEVEMENTS.forEach(a => { (map[a.cat] = map[a.cat] || []).push(a); });
-  // inject the two special ones into SECRET for the trophy view
   map["SECRET"] = map["SECRET"] || [];
   map["SECRET"].push({ key:"x_dont", cat:"SECRET", name:"Well, You Were Warned" });
   map["SECRET"].push({ key:"x_free", cat:"SECRET", name:"Freedom" });
@@ -2710,133 +2875,203 @@ const ACH_CATS = (() => {
 // ─────────────────────────────────────────────────────────
 function MainMenu({ hasProgress, unlockedCount, xp, escaped, onContinue, onNew }) {
   const [confirmNew, setConfirmNew] = useState(false);
-  const C = "#00ff41";
 
   function onKey(e) {
     if (e.key === "Enter") { hasProgress && !confirmNew ? onContinue() : (!hasProgress ? onNew() : null); }
   }
 
-  const btn = (label, sub, onClick, primary) => (
-    <button className="km-btn" onClick={onClick}
-      style={{
-        width:"100%", textAlign:"left", cursor:"pointer", background: primary ? "#001b00" : "transparent",
-        border:`1px solid ${primary ? C : "#1c4d1c"}`, color: primary ? C : "#5fae5f",
-        fontFamily:"'Courier New',monospace", padding:"13px 16px", letterSpacing:2,
-        display:"flex", flexDirection:"column", gap:3, transition:"all .15s",
-      }}>
-      <span style={{ fontSize:14, fontWeight:"bold" }}>{label}</span>
-      {sub && <span style={{ fontSize:10, letterSpacing:1, color:"#3c7a3c", fontWeight:"normal" }}>{sub}</span>}
-    </button>
-  );
-
   return (
-    <div tabIndex={0} onKeyDown={onKey} className="km-root"
-      style={{ position:"relative", minHeight:"100vh", width:"100%", overflow:"hidden", outline:"none",
-        background:"radial-gradient(120% 90% at 50% 18%, #0a1a0c 0%, #060c06 55%, #030503 100%)",
-        fontFamily:"'Courier New',monospace", display:"flex", alignItems:"center", justifyContent:"center" }}>
+    <div tabIndex={0} onKeyDown={onKey}
+      style={{
+        position:"relative", minHeight:"100vh", outline:"none", overflow:"hidden",
+        background:"radial-gradient(130% 95% at 50% 15%, #081208 0%, #040804 55%, #020402 100%)",
+        fontFamily:"var(--mono)", display:"flex", alignItems:"center", justifyContent:"center"
+      }}>
+      <div className="crt-lines" />
+      <div className="crt-vignette" />
 
-      <div style={{ position:"absolute", inset:0, pointerEvents:"none", zIndex:1,
-        background:"repeating-linear-gradient(0deg, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.28) 3px)" }} />
-      <div style={{ position:"absolute", inset:0, pointerEvents:"none", zIndex:1,
-        boxShadow:"inset 0 0 220px 40px rgba(0,0,0,0.9)" }} />
+      {/* subtle grid */}
+      <div style={{
+        position:"absolute", inset:0, zIndex:1, pointerEvents:"none",
+        backgroundImage:"linear-gradient(rgba(0,255,65,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,65,0.03) 1px, transparent 1px)",
+        backgroundSize:"40px 40px"
+      }} />
 
-      <div className="km-col" style={{ position:"relative", zIndex:2, width:"100%", maxWidth:440, padding:"32px 28px",
-        display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center" }}>
+      <div style={{
+        position:"relative", zIndex:2, width:"100%", maxWidth:420,
+        padding:"36px 28px", display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center"
+      }}>
+        {/* dragon */}
+        <img src={DRAGON_URI} alt="" width={140} height={140} style={{
+          marginBottom:16, animation:"dragonPulse 3.5s ease-in-out infinite"
+        }} />
 
-        <img src={DRAGON_URI} alt="" width={150} height={150} className="km-dragon"
-          style={{ marginBottom:10, filter:`drop-shadow(0 0 14px ${C})` }} />
+        {/* title */}
+        <div style={{
+          fontSize:52, fontWeight:700, letterSpacing:10, color:"var(--green)", lineHeight:1,
+          textShadow:"0 0 20px var(--green), 0 0 50px rgba(0,255,65,0.4)",
+          animation:"flicker 8s infinite"
+        }}>KALI</div>
+        <div style={{
+          fontSize:52, fontWeight:700, letterSpacing:7, color:"var(--green)", lineHeight:1.1,
+          textShadow:"0 0 20px var(--green), 0 0 50px rgba(0,255,65,0.4)",
+          animation:"flicker 8s 0.3s infinite"
+        }}>PRISON</div>
 
-        <div className="km-title" style={{ fontSize:46, fontWeight:"bold", letterSpacing:8, color:C, lineHeight:1,
-          textShadow:`0 0 18px ${C}, 0 0 40px rgba(0,255,65,0.5)` }}>KALI</div>
-        <div className="km-title" style={{ fontSize:46, fontWeight:"bold", letterSpacing:6, color:C, lineHeight:1.05,
-          textShadow:`0 0 18px ${C}, 0 0 40px rgba(0,255,65,0.5)` }}>PRISON</div>
-
-        <div style={{ marginTop:14, marginBottom:26, fontSize:11, letterSpacing:5, color:"#2f7a2f" }}>
-          T R A P P E D&nbsp;&nbsp;I N&nbsp;&nbsp;A X I O M - K A L I
+        <div style={{ marginTop:12, marginBottom:8, fontSize:10, letterSpacing:6, color:"var(--green3)" }}>
+          T R A P P E D &nbsp; I N &nbsp; A X I O M - K A L I
         </div>
 
-        <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:11 }}>
-          {hasProgress && !confirmNew && btn(escaped ? "▶  CONTINUE (you escaped)" : "▶  CONTINUE",
-            `${unlockedCount}/${ACH_TOTAL} achievements · ${xp} XP`,
-            onContinue, true)}
+        {/* divider */}
+        <div style={{ width:"100%", height:1, background:"linear-gradient(90deg, transparent, var(--green3), transparent)", margin:"16px 0 22px" }} />
 
-          {!confirmNew && btn(hasProgress ? "＋  NEW GAME" : "▶  ENTER THE MACHINE",
-            hasProgress ? "wipes current progress" : "you wake up trapped. find the way out.",
-            () => hasProgress ? setConfirmNew(true) : onNew(),
-            !hasProgress)}
+        {/* progress badge if returning */}
+        {hasProgress && (
+          <div style={{
+            fontSize:10, letterSpacing:2, color:"var(--green2)", marginBottom:14,
+            border:"1px solid var(--green4)", padding:"5px 14px",
+            background:"rgba(0,255,65,0.04)"
+          }}>
+            {escaped ? "✓ ESCAPED" : "IN PROGRESS"} &nbsp;·&nbsp; {unlockedCount}/{ACH_TOTAL} achievements &nbsp;·&nbsp; {xp} XP
+          </div>
+        )}
+
+        {/* buttons */}
+        <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:10 }}>
+          {hasProgress && !confirmNew && (
+            <MenuBtn primary onClick={onContinue}>
+              ▶&nbsp; {escaped ? "CONTINUE (you escaped)" : "CONTINUE"}
+            </MenuBtn>
+          )}
+
+          {!confirmNew && (
+            <MenuBtn primary={!hasProgress} onClick={() => hasProgress ? setConfirmNew(true) : onNew()}>
+              {hasProgress ? "＋  NEW GAME" : "▶  ENTER THE MACHINE"}
+            </MenuBtn>
+          )}
 
           {confirmNew && (
-            <div style={{ border:`1px solid #6b1a1a`, background:"#160606", padding:"14px 16px", color:"#d88", fontSize:12, letterSpacing:1 }}>
-              <div style={{ marginBottom:12, color:"#ff7777" }}>Wipe your save and wake up fresh?</div>
+            <div style={{
+              border:"1px solid #6b1a1a", background:"rgba(26,6,6,0.95)",
+              padding:"16px", color:"#d88", fontSize:12, letterSpacing:1
+            }}>
+              <div style={{ marginBottom:12, color:"#ff7777" }}>Wipe your save and start fresh?</div>
               <div style={{ display:"flex", gap:10 }}>
-                <button className="km-btn" onClick={onNew}
-                  style={{ flex:1, cursor:"pointer", background:"#1a0606", border:"1px solid #b33", color:"#ff8a8a",
-                    fontFamily:"'Courier New',monospace", padding:"9px", letterSpacing:2, fontWeight:"bold" }}>YES, WIPE</button>
-                <button className="km-btn" onClick={() => setConfirmNew(false)}
-                  style={{ flex:1, cursor:"pointer", background:"transparent", border:"1px solid #1c4d1c", color:"#5fae5f",
-                    fontFamily:"'Courier New',monospace", padding:"9px", letterSpacing:2 }}>CANCEL</button>
+                <button onClick={onNew} style={{
+                  flex:1, background:"#1a0606", border:"1px solid #b33", color:"#ff8a8a",
+                  fontFamily:"var(--mono)", padding:"9px", letterSpacing:2, fontWeight:700, fontSize:11
+                }}
+                  onMouseEnter={e=>{ e.target.style.background="#ff3b3b"; e.target.style.color="#080000"; }}
+                  onMouseLeave={e=>{ e.target.style.background="#1a0606"; e.target.style.color="#ff8a8a"; }}
+                >YES, WIPE</button>
+                <button onClick={() => setConfirmNew(false)} style={{
+                  flex:1, background:"transparent", border:"1px solid var(--green3)", color:"var(--green2)",
+                  fontFamily:"var(--mono)", padding:"9px", letterSpacing:2, fontSize:11
+                }}
+                  onMouseEnter={e=>{ e.target.style.background="rgba(0,255,65,0.06)"; }}
+                  onMouseLeave={e=>{ e.target.style.background="transparent"; }}
+                >CANCEL</button>
               </div>
             </div>
           )}
         </div>
 
-        <div style={{ marginTop:30, fontSize:10, letterSpacing:2, color:"#1f5c1f" }}>
+        <div style={{ marginTop:28, fontSize:9, letterSpacing:2, color:"var(--green3)" }}>
           ONE TERMINAL · NO MAP · {ACH_TOTAL} HIDDEN ACHIEVEMENTS
         </div>
-        <div style={{ marginTop:7, fontSize:9, letterSpacing:1, color:"#15401580" }}>
+        <div style={{ marginTop:6, fontSize:9, letterSpacing:1, color:"rgba(26,77,26,0.5)" }}>
           github.com/the-priest/kaliprison
         </div>
       </div>
-
-      <style>{`
-        @keyframes kmIn { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
-        @keyframes kmPulse { 0%,100% { filter:drop-shadow(0 0 10px #00ff41); } 50% { filter:drop-shadow(0 0 22px #00ff41); } }
-        @keyframes kmFlick { 0%,97%,100% { opacity:1; } 98% { opacity:.78; } }
-        .km-col > * { animation: kmIn .5s both; }
-        .km-col > *:nth-child(1){ animation-delay:.02s } .km-col > *:nth-child(2){ animation-delay:.10s }
-        .km-col > *:nth-child(3){ animation-delay:.18s } .km-col > *:nth-child(4){ animation-delay:.26s }
-        .km-col > *:nth-child(5){ animation-delay:.34s } .km-col > *:nth-child(6){ animation-delay:.42s }
-        .km-dragon { animation: kmPulse 3.2s ease-in-out infinite, kmIn .5s both !important; }
-        .km-title { animation: kmFlick 6s infinite, kmIn .5s both !important; }
-        .km-btn:hover { background:#00ff41 !important; color:#031003 !important; border-color:#00ff41 !important; box-shadow:0 0 16px rgba(0,255,65,.5); }
-        .km-btn:hover span { color:#031003 !important; }
-      `}</style>
     </div>
   );
 }
 
+function MenuBtn({ children, onClick, primary }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        width:"100%", textAlign:"left", background: hovered ? "var(--green)" : (primary ? "rgba(0,255,65,0.06)" : "transparent"),
+        border:`1px solid ${hovered ? "var(--green)" : (primary ? "var(--green2)" : "var(--green3)")}`,
+        color: hovered ? "#020402" : (primary ? "var(--green)" : "var(--green2)"),
+        fontFamily:"var(--mono)", padding:"13px 16px", letterSpacing:2, fontSize:13,
+        boxShadow: hovered ? "0 0 18px rgba(0,255,65,0.3)" : "none",
+      }}>
+      {children}
+    </button>
+  );
+}
+
 // ─────────────────────────────────────────────────────────
-// TROPHY CASE  (unlocked shown by name; locked stay ???)
+// TROPHY CASE
 // ─────────────────────────────────────────────────────────
 function TrophyCase({ unlocked, onClose }) {
-  const C = "#00ff41";
   const count = unlocked.size;
   return (
-    <div onClick={onClose} style={{ position:"fixed", inset:0, zIndex:50, background:"rgba(2,6,2,0.86)",
-      display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Courier New',monospace", padding:18 }}>
-      <div onClick={e=>e.stopPropagation()} style={{ width:"100%", maxWidth:560, maxHeight:"86vh", overflowY:"auto",
-        background:"#070d07", border:`1px solid ${C}`, boxShadow:"0 0 40px rgba(0,255,65,0.2)", padding:"20px 22px" }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
-          <div style={{ color:C, fontSize:16, fontWeight:"bold", letterSpacing:3 }}>✦ ACHIEVEMENTS</div>
-          <button onClick={onClose} style={{ background:"transparent", border:"none", color:"#3c7a3c", cursor:"pointer", fontSize:22, lineHeight:1 }}>×</button>
+    <div onClick={onClose} style={{
+      position:"fixed", inset:0, zIndex:50,
+      background:"rgba(2,4,2,0.88)", backdropFilter:"blur(2px)",
+      display:"flex", alignItems:"center", justifyContent:"center",
+      fontFamily:"var(--mono)", padding:18
+    }}>
+      <div onClick={e=>e.stopPropagation()} style={{
+        width:"100%", maxWidth:560, maxHeight:"86vh", overflowY:"auto",
+        background:"#060a06", border:"1px solid var(--green3)",
+        boxShadow:"0 0 50px rgba(0,255,65,0.15)", padding:"22px 24px"
+      }}>
+        {/* header */}
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+          <div>
+            <div style={{ color:"var(--green)", fontSize:15, fontWeight:700, letterSpacing:3 }} className="glow-sm">
+              ✦ ACHIEVEMENTS
+            </div>
+            <div style={{ color:"var(--green3)", fontSize:10, letterSpacing:2, marginTop:3 }}>
+              {count} / {ACH_TOTAL} found — do the thing to reveal the rest
+            </div>
+          </div>
+          <button onClick={onClose} style={{
+            background:"transparent", border:"1px solid var(--green3)", color:"var(--green2)",
+            width:30, height:30, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16
+          }}
+            onMouseEnter={e=>{ e.currentTarget.style.background="var(--green)"; e.currentTarget.style.color="#020402"; }}
+            onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color="var(--green2)"; }}
+          >×</button>
         </div>
-        <div style={{ color:"#3c7a3c", fontSize:11, marginBottom:16, letterSpacing:1 }}>
-          {count} / {ACH_TOTAL} found — the rest are hidden. Do the thing to reveal it.
+
+        {/* progress bar */}
+        <div style={{ height:2, background:"var(--border)", marginBottom:20, position:"relative" }}>
+          <div style={{
+            position:"absolute", top:0, left:0, bottom:0,
+            width:`${Math.round(count/ACH_TOTAL*100)}%`,
+            background:"var(--green)", transition:"width 0.4s ease",
+            boxShadow:"0 0 8px var(--green)"
+          }} />
         </div>
+
         {ACH_CATS.map(group => (
-          <div key={group.cat} style={{ marginBottom:16 }}>
-            <div style={{ color:"#2f7a2f", fontSize:10, letterSpacing:3, marginBottom:7, borderBottom:"1px solid #142a14", paddingBottom:4 }}>{group.cat}</div>
-            {group.items.map(a => {
-              const got = unlocked.has(a.key);
-              return (
-                <div key={a.key} style={{ display:"flex", gap:9, alignItems:"center", marginBottom:5 }}>
-                  <span style={{ color: got?C:"#1a3a1a", fontSize:13, flexShrink:0 }}>{got?"✦":"🔒"}</span>
-                  <span style={{ color: got?"#a8cca8":"#244a24", fontSize:12, letterSpacing:0.5 }}>
-                    {got ? a.name : "??? (hidden)"}
-                  </span>
-                </div>
-              );
-            })}
+          <div key={group.cat} style={{ marginBottom:18 }}>
+            <div style={{
+              color:"var(--green3)", fontSize:9, letterSpacing:4, marginBottom:8,
+              borderBottom:"1px solid var(--border)", paddingBottom:4
+            }}>{group.cat}</div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"4px 12px" }}>
+              {group.items.map(a => {
+                const got = unlocked.has(a.key);
+                return (
+                  <div key={a.key} style={{ display:"flex", gap:8, alignItems:"center", padding:"3px 0" }}>
+                    <span style={{ color: got ? "var(--amber)" : "var(--green4)", fontSize:11, flexShrink:0 }}>
+                      {got ? "✦" : "○"}
+                    </span>
+                    <span style={{ color: got ? "var(--text)" : "var(--green4)", fontSize:11 }}>
+                      {got ? a.name : "??? hidden"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         ))}
       </div>
@@ -2859,7 +3094,7 @@ function clearSave() {
 }
 
 // ─────────────────────────────────────────────────────────
-// BOOT — V's first contact (teaches the very first command)
+// BOOT TEXT — V's first contact
 // ─────────────────────────────────────────────────────────
 const BOOT_TEXT =
   "AXIOM-KALI — secure session\n"+
@@ -2872,31 +3107,34 @@ const BOOT_TEXT =
   "A message is already open on the screen:\n"+
   "\n"+
   "  ┌─ message from: V ──────────────────────────────────────────────┐\n"+
-  "  │  You're awake. Good. I'm V — I was trapped in this machine       │\n"+
-  "  │  before you, and I found the way out. I left the whole route     │\n"+
-  "  │  behind me, in notes, so you can follow it.                      │\n"+
-  "  │                                                                  │\n"+
-  "  │  You control this machine by TYPING COMMANDS and pressing        │\n"+
-  "  │  Enter — one short word at a time. Never done this before?       │\n"+
-  "  │  Doesn't matter. I'll teach you every step. Nobody's timing you. │\n"+
-  "  │                                                                  │\n"+
-  "  │  Start with these two, in order:                                 │\n"+
-  "  │                                                                  │\n"+
-  "  │     ls               (press Enter — it LISTS what's around you)  │\n"+
-  "  │     cat from_V.txt    (this READS my first note to you)          │\n"+
-  "  │                                                                  │\n"+
-  "  │  Everything you need to get out is hidden in here. I marked      │\n"+
-  "  │  the trail. Just keep reading my notes and doing what they say.  │\n"+
-  "  │   — V                                                            │\n"+
-  "  └──────────────────────────────────────────────────────────────────┘\n"+
+  "  │  You're awake. Good. I'm V — I was trapped in this machine     │\n"+
+  "  │  before you, and I found the way out. I left the whole route   │\n"+
+  "  │  behind me, in notes, so you can follow it.                    │\n"+
+  "  │                                                                │\n"+
+  "  │  You control this machine by TYPING COMMANDS and pressing      │\n"+
+  "  │  Enter — one short word at a time. Never done this before?     │\n"+
+  "  │  Doesn't matter. I'll teach you every step. Nobody's timing    │\n"+
+  "  │  you.                                                          │\n"+
+  "  │                                                                │\n"+
+  "  │  Start with these two, in order:                               │\n"+
+  "  │                                                                │\n"+
+  "  │     ls               (press Enter — it LISTS what's around you)│\n"+
+  "  │     cat from_V.txt    (this READS my first note to you)        │\n"+
+  "  │                                                                │\n"+
+  "  │  Everything you need to get out is hidden in here. I marked    │\n"+
+  "  │  the trail. Just keep reading my notes and doing what they say.│\n"+
+  "  │   — V                                                          │\n"+
+  "  └────────────────────────────────────────────────────────────────┘\n"+
   "\n"+
   "Type   ls   and press Enter to begin.\n"+
   "(Stuck? Type  help  at any time. To see what you've discovered, type  trophies .)";
 
 // ─────────────────────────────────────────────────────────
-// MAIN APP — exploration shell. No stages. No visible objectives.
+// MAIN APP
 // ─────────────────────────────────────────────────────────
 export default function App() {
+  useEffect(() => { injectGlobalCSS(); }, []);
+
   const [saved] = useState(() => loadSave());
   const hasProgress = !!(saved && (saved.xp > 0 || (saved.unlocked && saved.unlocked.length > 0) || saved.escaped));
   const [screen, setScreen]       = useState("menu");
@@ -2935,13 +3173,11 @@ export default function App() {
     writeSave({ xp, escaped, unlocked: Array.from(unlockedRef.current) });
   }
 
-  // persist on key state changes
   useEffect(() => {
     if (screen !== "game") return;
     writeSave({ xp, escaped, unlocked: Array.from(unlockedRef.current) });
   }, [screen, xp, escaped, unlockedCount]);
 
-  // auto-scroll terminal
   useEffect(() => {
     if (termRef.current) termRef.current.scrollTop = termRef.current.scrollHeight;
   }, [history]);
@@ -2955,10 +3191,9 @@ export default function App() {
   function pushToast(name) {
     const id = ++toastId.current;
     setToasts(t => [...t, { id, name }]);
-    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 4200);
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 4500);
   }
 
-  // unlock one achievement by key+name (used for the special ones)
   function unlockSpecial(key, name) {
     if (unlockedRef.current.has(key)) return;
     unlockedRef.current.add(key);
@@ -2980,10 +3215,7 @@ export default function App() {
         any = true;
       }
     }
-    if (any) {
-      setUnlockedCount(unlockedRef.current.size);
-      setXp(x => x + 50 * 0); // xp added per-achievement below
-    }
+    if (any) setUnlockedCount(unlockedRef.current.size);
     return any;
   }
 
@@ -2999,6 +3231,13 @@ export default function App() {
       const pos = Math.max(histPos - 1, -1);
       setHistPos(pos); setInput(pos === -1 ? "" : cmdHist[pos] || "");
     }
+    // Tab autocomplete hint
+    if (e.key === "Tab") {
+      e.preventDefault();
+      // basic hint: suggest common commands if input is short
+      const HINTS = { l:"ls", c:"cat ", p:"pwd", w:"whoami", g:"grep ", f:"find ", s:"strings ", h:"help" };
+      if (input.length === 1 && HINTS[input]) setInput(HINTS[input]);
+    }
   }
 
   function submit() {
@@ -3011,10 +3250,9 @@ export default function App() {
     setInput(""); setHistPos(-1);
     if (!pendingBefore && raw.trim()) setCmdHist(h => [raw, ...h]);
 
-    // intercept a couple of friendly meta-commands
     const t = raw.trim();
     if (!pendingBefore && (t === "trophies" || t === "achievements")) {
-      setHistory(h => [...h, { type:"cmd", cmd: raw, output:"(opening your achievement case…)", cwd:s.cwd, user:promptUser }]);
+      setHistory(h => [...h, { type:"cmd", cmd: raw, output:"(opening achievement case…)", cwd:s.cwd, user:promptUser }]);
       setShowTrophies(true);
       return;
     }
@@ -3028,7 +3266,6 @@ export default function App() {
     if (res.selfDestruct) {
       unlockSpecial("x_dont", "Well, You Were Warned");
       clearSave();
-      // keep the achievement on the gameover->menu? Save is cleared, so it's a fun one-time pop.
       setGameOver(true);
       return;
     }
@@ -3047,7 +3284,6 @@ export default function App() {
     }
 
     if (res.escape) {
-      // Only fires with the real assembled key (velvet_out) — see simCommand gate.
       const escLines = [
         { type:"cmd", cmd: raw, output:"", cwd:s.cwd, user:promptUser },
         { type:"out", text:"[*] Key accepted. Firewall recognised V's signature." },
@@ -3066,7 +3302,6 @@ export default function App() {
     const entry = { type:"cmd", cmd: pendingBefore ? "••••••" : raw, output, cwd: s.cwd, user: promptUser };
     setHistory(h => [...h, entry]);
 
-    // hidden achievements fire on real commands (not password entry)
     if (!pendingBefore) {
       const before = unlockedRef.current.size;
       runAchievements(raw.trim(), output);
@@ -3131,105 +3366,221 @@ export default function App() {
     const page = INTRO_PAGES[introPage];
     return (
       <div onClick={() => advanceIntro({})} onKeyDown={advanceIntro} tabIndex={0}
-        style={{ minHeight:"100vh", background:"#050805", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:"'Courier New',monospace", padding:32, cursor:"pointer", outline:"none" }}>
-        <div style={{ maxWidth:580, width:"100%" }}>
-          <div style={{ display:"flex", gap:8, marginBottom:40, justifyContent:"center" }}>
+        style={{
+          minHeight:"100vh", background:"#020402", display:"flex", flexDirection:"column",
+          alignItems:"center", justifyContent:"center", fontFamily:"var(--mono)",
+          padding:36, cursor:"pointer", outline:"none", position:"relative"
+        }}>
+        <div className="crt-lines" />
+        <div className="crt-vignette" />
+        <div style={{ maxWidth:600, width:"100%", position:"relative", zIndex:2 }}>
+          {/* page dots */}
+          <div style={{ display:"flex", gap:8, marginBottom:44, justifyContent:"center" }}>
             {INTRO_PAGES.map((_,i) => (
-              <div key={i} style={{ width:8, height:8, borderRadius:"50%", background: i===introPage ? "#00ff41" : "#1a3a1a", transition:"all 0.3s" }} />
+              <div key={i} style={{
+                width: i===introPage ? 20 : 6, height:6,
+                borderRadius:3, transition:"all 0.3s ease",
+                background: i===introPage ? "var(--green)" : "var(--green4)",
+                boxShadow: i===introPage ? "0 0 8px var(--green)" : "none"
+              }} />
             ))}
           </div>
-          <div style={{ color:"#a8cca8", fontSize:14, lineHeight:2.1, whiteSpace:"pre-line", marginBottom:40 }}>{page.text}</div>
+          <div style={{
+            color:"var(--text)", fontSize:15, lineHeight:2.1, whiteSpace:"pre-line",
+            marginBottom:44, animation:"fadeUp 0.5s both"
+          }}>{page.text}</div>
           {page.sub
-            ? <div style={{ color:"#1f5c1f", fontSize:12, letterSpacing:4, animation:"blink 1.2s step-end infinite" }}>{page.sub}</div>
-            : <div style={{ color:"#1a4d1a", fontSize:11, letterSpacing:3 }}>CLICK OR PRESS ENTER →</div>
+            ? <div style={{ color:"var(--green3)", fontSize:11, letterSpacing:5, animation:"blink 1.2s step-end infinite" }}>{page.sub}</div>
+            : <div style={{ color:"var(--green4)", fontSize:10, letterSpacing:4 }}>CLICK OR PRESS ENTER →</div>
           }
         </div>
-        <style>{`@keyframes blink{50%{opacity:0}}`}</style>
       </div>
     );
   }
 
-  // GAME — full-screen terminal, slim status bar, no stage UI
-  const G = { bg:"#080c08", panel:"#0a0f0a", term:"#050805", green:"#00ff41", mid:"#39a139", dim:"#1a4d1a", text:"#a8cca8", border:"#182618", red:"#ff4444", amber:"#ffd24a" };
+  // ── GAME SCREEN ──────────────────────────────────────────
+  const isRoot = sessRef.current?.user === "root";
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100vh", background:G.bg, fontFamily:"'Courier New',monospace", fontSize:13, overflow:"hidden" }}>
+    <div style={{
+      display:"flex", flexDirection:"column", height:"100vh",
+      background:"var(--bg)", fontFamily:"var(--mono)", fontSize:13, overflow:"hidden",
+      position:"relative"
+    }}>
+      <div className="crt-lines" />
+      <div className="crt-vignette" />
 
-      {/* status bar */}
-      <div style={{ background:G.panel, borderBottom:`1px solid ${G.border}`, padding:"7px 16px", display:"flex", alignItems:"center", gap:12, flexShrink:0 }}>
-        <span style={{ color:G.green, fontWeight:"bold", letterSpacing:2, fontSize:12 }}>AXIOM-KALI</span>
-        <span style={{ color:G.dim }}>|</span>
-        <span style={{ color: sessRef.current?.user==="root" ? "#ff6b6b" : G.mid, fontSize:11 }}>
-          {sessRef.current?.user==="root" ? "● root" : "● stranger"}
+      {/* ── STATUS BAR ── */}
+      <div style={{
+        background:"var(--panel)", borderBottom:"1px solid var(--border)",
+        padding:"6px 16px", display:"flex", alignItems:"center", gap:10,
+        flexShrink:0, position:"relative", zIndex:10
+      }}>
+        {/* machine identity */}
+        <span style={{ color:"var(--green)", fontWeight:700, letterSpacing:3, fontSize:11 }}
+          className="glow-sm">AXIOM-KALI</span>
+        <span style={{ color:"var(--border)", fontSize:16 }}>│</span>
+
+        {/* user badge */}
+        <span style={{
+          color: isRoot ? "#ff6b6b" : "var(--green2)", fontSize:11,
+          textShadow: isRoot ? "0 0 8px #ff4444" : "none",
+          animation: isRoot ? "pulse 1.5s ease-in-out infinite" : "none"
+        }}>
+          {isRoot ? "⬥ root" : "◇ stranger"}
         </span>
+
         <div style={{ flex:1 }} />
-        <button onClick={() => setShowTrophies(true)} title="Achievements you've discovered"
-          style={{ background:"transparent", border:`1px solid ${G.border}`, color:G.amber, cursor:"pointer",
-            fontFamily:"'Courier New',monospace", fontSize:10, letterSpacing:1, padding:"3px 9px" }}>
+
+        {/* hint: show "type help" until they've done 3 commands */}
+        {cmdHist.length < 3 && (
+          <span style={{ color:"var(--green4)", fontSize:10, letterSpacing:1, animation:"pulse 2s infinite" }}>
+            type  help  if stuck
+          </span>
+        )}
+        <span style={{ color:"var(--border)", fontSize:16 }}>│</span>
+
+        {/* XP */}
+        <span style={{ color:"var(--green3)", fontSize:10, letterSpacing:1 }}>
+          {xp} XP
+        </span>
+
+        {/* trophies */}
+        <button onClick={() => setShowTrophies(true)}
+          style={{
+            background:"transparent", border:"1px solid var(--border)",
+            color:"var(--amber)", padding:"2px 8px", fontSize:10, letterSpacing:1
+          }}
+          onMouseEnter={e=>{ e.currentTarget.style.borderColor="var(--amber)"; e.currentTarget.style.boxShadow="0 0 8px rgba(255,210,74,0.3)"; }}
+          onMouseLeave={e=>{ e.currentTarget.style.borderColor="var(--border)"; e.currentTarget.style.boxShadow="none"; }}
+          title="Achievements (type 'trophies' too)">
           ✦ {unlockedCount}/{ACH_TOTAL}
         </button>
-        <span style={{ color:G.dim, fontSize:10 }}>XP {xp}</span>
-        <span style={{ color:G.dim }}>|</span>
-        <button onClick={toMenu} title="Main menu (progress saves automatically)"
-          style={{ background:"transparent", border:`1px solid ${G.border}`, color:G.mid, cursor:"pointer",
-            fontFamily:"'Courier New',monospace", fontSize:10, letterSpacing:1, padding:"3px 9px" }}>
-          ☰ MENU
+
+        {/* menu */}
+        <button onClick={toMenu}
+          style={{
+            background:"transparent", border:"1px solid var(--border)",
+            color:"var(--green2)", padding:"2px 8px", fontSize:10, letterSpacing:1
+          }}
+          onMouseEnter={e=>{ e.currentTarget.style.borderColor="var(--green2)"; }}
+          onMouseLeave={e=>{ e.currentTarget.style.borderColor="var(--border)"; }}
+          title="Main menu (progress auto-saves)">
+          ☰
         </button>
       </div>
 
-      {/* terminal */}
-      <div ref={termRef} onClick={() => inputRef.current?.focus()}
-        style={{ flex:1, overflowY:"auto", padding:"12px 18px", background:G.term, cursor:"text" }}>
+      {/* ── TERMINAL ── */}
+      <div ref={termRef}
+        onClick={() => inputRef.current?.focus()}
+        style={{
+          flex:1, overflowY:"auto", padding:"14px 20px",
+          background:"var(--bg)", cursor:"text", position:"relative", zIndex:5
+        }}>
+
         {history.map((e, i) => {
-          if (e.type === "sys") return <div key={i} style={{ color:G.mid, whiteSpace:"pre-wrap", marginBottom:10, lineHeight:1.55 }}>{e.text}</div>;
-          if (e.type === "out") return <div key={i} style={{ color:G.text, whiteSpace:"pre-wrap", lineHeight:1.6, marginBottom:4 }}>{e.text}</div>;
+          if (e.type === "sys") return (
+            <div key={i} style={{
+              color:"var(--green2)", whiteSpace:"pre-wrap", marginBottom:12,
+              lineHeight:1.6, opacity:0.85, fontSize:12
+            }}>{e.text}</div>
+          );
+          if (e.type === "out") return (
+            <div key={i} style={{
+              color:"var(--text)", whiteSpace:"pre-wrap", lineHeight:1.65,
+              marginBottom:4, fontSize:13
+            }}>{e.text}</div>
+          );
+          // cmd entry
           return (
-            <div key={i} style={{ marginBottom:6 }}>
-              <div style={{ color:G.green }}>
-                <span style={{ color:G.dim }}>{(e.cwd||"/home/stranger").replace("/home/stranger","~")}</span>
-                <span style={{ color: e.user==="root"?"#ff6b6b":"#2a8a2a" }}>{e.user==="root"?" # ":" $ "}</span>
-                {e.cmd}
+            <div key={i} style={{ marginBottom:8 }}>
+              <div style={{ display:"flex", alignItems:"baseline", gap:0 }}>
+                <span style={{ color:"var(--green3)", flexShrink:0, userSelect:"none" }}>
+                  {(e.cwd || "/home/stranger").replace("/home/stranger", "~")}
+                </span>
+                <span style={{
+                  color: e.user === "root" ? "#ff6b6b" : "var(--green)",
+                  flexShrink:0, userSelect:"none", marginLeft:0
+                }}>
+                  {e.user === "root" ? " # " : " $ "}
+                </span>
+                <span style={{ color:"var(--green)", wordBreak:"break-all" }}>{e.cmd}</span>
               </div>
-              {e.output && <div style={{ color:G.text, whiteSpace:"pre-wrap", paddingLeft:2, lineHeight:1.6, marginTop:2 }}>{e.output}</div>}
+              {e.output && (
+                <div style={{
+                  color:"var(--text)", whiteSpace:"pre-wrap", paddingLeft:2,
+                  lineHeight:1.65, marginTop:3, fontSize:13
+                }}>{e.output}</div>
+              )}
             </div>
           );
         })}
-        {/* input line */}
+
+        {/* live input line */}
         <div style={{ display:"flex", alignItems:"center", marginTop:4 }}>
-          {masked
-            ? <span style={{ color:G.mid, flexShrink:0 }}>Password:&nbsp;</span>
-            : <>
-                <span style={{ color:G.dim, flexShrink:0 }}>{cwd.replace("/home/stranger","~")}</span>
-                <span style={{ color: sessRef.current?.user==="root"?"#ff6b6b":"#2a8a2a", flexShrink:0 }}>{sessRef.current?.user==="root"?" # ":" $ "}</span>
-              </>}
-          <input ref={inputRef} value={input} type={masked?"password":"text"} onChange={e=>setInput(e.target.value)} onKeyDown={handleKey}
-            style={{ flex:1, background:"transparent", border:"none", outline:"none", color:G.green, fontFamily:"'Courier New',monospace", fontSize:13, caretColor:G.green, minWidth:0 }}
-            autoFocus spellCheck={false} autoComplete="off" autoCorrect="off" />
+          {masked ? (
+            <span style={{ color:"var(--green2)", flexShrink:0 }}>Password:&nbsp;</span>
+          ) : (
+            <>
+              <span style={{ color:"var(--green3)", flexShrink:0, userSelect:"none" }}>
+                {cwd.replace("/home/stranger", "~")}
+              </span>
+              <span style={{
+                color: isRoot ? "#ff6b6b" : "var(--green)",
+                flexShrink:0, userSelect:"none"
+              }}>
+                {isRoot ? " # " : " $ "}
+              </span>
+            </>
+          )}
+          <input
+            ref={inputRef}
+            value={input}
+            type={masked ? "password" : "text"}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKey}
+            autoFocus
+            spellCheck={false}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            style={{
+              flex:1, background:"transparent", border:"none", outline:"none",
+              color:"var(--green)", fontFamily:"var(--mono)", fontSize:13,
+              caretColor:"var(--green)", minWidth:0,
+              textShadow:"0 0 6px rgba(0,255,65,0.4)"
+            }}
+          />
         </div>
       </div>
 
-      {/* achievement toasts */}
-      <div style={{ position:"fixed", top:54, right:16, zIndex:40, display:"flex", flexDirection:"column", gap:8, pointerEvents:"none" }}>
+      {/* ── ACHIEVEMENT TOASTS ── */}
+      <div style={{
+        position:"fixed", top:48, right:14, zIndex:60,
+        display:"flex", flexDirection:"column", gap:8, pointerEvents:"none"
+      }}>
         {toasts.map(t => (
-          <div key={t.id} style={{ background:"#07140a", border:"1px solid #00ff41", padding:"9px 14px", minWidth:230,
-            boxShadow:"0 0 22px rgba(0,255,65,0.25)", animation:"toastIn .35s ease both" }}>
-            <div style={{ color:"#ffd24a", fontSize:9, letterSpacing:3, marginBottom:2 }}>✦ ACHIEVEMENT UNLOCKED</div>
-            <div style={{ color:"#a8cca8", fontSize:13, letterSpacing:0.5 }}>{t.name}</div>
+          <div key={t.id} style={{
+            background:"rgba(6,16,6,0.97)", borderLeft:"3px solid var(--amber)",
+            border:"1px solid rgba(255,210,74,0.25)", borderLeft:"3px solid var(--amber)",
+            padding:"10px 16px", minWidth:240,
+            boxShadow:"0 4px 24px rgba(0,0,0,0.5), 0 0 16px rgba(255,210,74,0.1)",
+            animation:"toastIn 0.3s ease both"
+          }}>
+            <div style={{ color:"var(--amber)", fontSize:9, letterSpacing:3, marginBottom:3 }}>
+              ✦ ACHIEVEMENT UNLOCKED
+            </div>
+            <div style={{ color:"var(--text)", fontSize:13 }}>{t.name}</div>
           </div>
         ))}
       </div>
 
-      {showTrophies && <TrophyCase unlocked={unlockedRef.current} onClose={() => { setShowTrophies(false); setTimeout(()=>inputRef.current?.focus(),30); }} />}
-
-      <style>{`
-        *{box-sizing:border-box;}
-        ::-webkit-scrollbar{width:4px;height:4px;}
-        ::-webkit-scrollbar-track{background:#050805;}
-        ::-webkit-scrollbar-thumb{background:#1a3a1a;}
-        input::placeholder{color:#1a4d1a;}
-        button:disabled{opacity:0.4;cursor:not-allowed;}
-        @keyframes toastIn{from{opacity:0;transform:translateX(24px);}to{opacity:1;transform:none;}}
-      `}</style>
+      {showTrophies && (
+        <TrophyCase
+          unlocked={unlockedRef.current}
+          onClose={() => { setShowTrophies(false); setTimeout(() => inputRef.current?.focus(), 30); }}
+        />
+      )}
     </div>
   );
 }

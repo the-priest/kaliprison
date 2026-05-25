@@ -3,21 +3,42 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TRAPPED — AXIOM-KALI</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23050805'/%3E%3Ctext x='4' y='24' font-family='monospace' font-size='22' fill='%2300ff41'%3E%3E_%3C/text%3E%3C/svg%3E">
+<title>KALI PRISON — AXIOM-KALI</title>
+<meta name="description" content="A browser game that teaches Linux and cybersecurity by trapping you inside a machine. Find the way out.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23020402'/%3E%3Ctext x='3' y='24' font-family='monospace' font-size='22' fill='%2300ff41'%3E%3E_%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap" rel="stylesheet">
 <style>
-  html,body{margin:0;padding:0;height:100%;background:#050805;overflow:hidden;}
+  /* fallback if offline — Courier New looks good too */
+  html,body{margin:0;padding:0;height:100%;background:#020402;overflow:hidden;}
   #root{height:100vh;}
-  #boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
-        background:#050805;color:#00ff41;font-family:'Courier New',monospace;font-size:14px;
-        letter-spacing:3px;text-shadow:0 0 12px #00ff41;z-index:9999;}
+  #boot{
+    position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    background:#020402;color:#00ff41;
+    font-family:'JetBrains Mono','Courier New',monospace;font-size:13px;
+    letter-spacing:4px;text-shadow:0 0 12px #00ff41;z-index:9999;
+    flex-direction:column;gap:16px;
+  }
   #boot.gone{display:none;}
-  @keyframes pulse{50%{opacity:.35}}
-  #boot b{animation:pulse 1s step-end infinite;font-weight:normal;}
+  #boot-bar{
+    width:200px;height:2px;background:#0d2a0d;position:relative;overflow:hidden;
+  }
+  #boot-fill{
+    position:absolute;top:0;left:0;height:100%;background:#00ff41;
+    box-shadow:0 0 8px #00ff41;
+    animation:bootfill 1.2s ease forwards;
+  }
+  @keyframes bootfill{from{width:0}to{width:100%}}
+  @keyframes pulse{50%{opacity:.3}}
+  #boot b{animation:pulse 0.9s step-end infinite;font-weight:normal;}
 </style>
 </head>
 <body>
-<div id="boot">INITIALISING AXIOM-KALI<b>_</b></div>
+<div id="boot">
+  <div>INITIALISING AXIOM-KALI<b>_</b></div>
+  <div id="boot-bar"><div id="boot-fill"></div></div>
+</div>
 <div id="root"></div>
 <script>/**
  * @license React
@@ -5077,87 +5098,258 @@ function checkObjectives(objs, cmd, output, sess, fs) {
     }
   });
 }
+const GLOBAL_CSS = `
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { height: 100%; background: #030603; }
+
+/* phosphor CRT cursor */
+:root {
+  --green:  #00ff41;
+  --green2: #39a139;
+  --green3: #1a4d1a;
+  --green4: #0d2a0d;
+  --dim:    #0f2d0f;
+  --text:   #a8cca8;
+  --border: #172217;
+  --amber:  #ffd24a;
+  --red:    #ff4444;
+  --bg:     #030603;
+  --panel:  #060a06;
+  --mono:   'JetBrains Mono', 'Courier New', monospace;
+}
+
+/* custom scrollbar */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--green3); border-radius: 2px; }
+
+/* CRT scanline overlay */
+.crt-lines {
+  pointer-events: none;
+  position: fixed; inset: 0; z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px, transparent 2px,
+    rgba(0,0,0,0.18) 2px, rgba(0,0,0,0.18) 3px
+  );
+}
+/* vignette */
+.crt-vignette {
+  pointer-events: none;
+  position: fixed; inset: 0; z-index: 9998;
+  background: radial-gradient(ellipse at center,
+    transparent 55%, rgba(0,0,0,0.75) 100%
+  );
+}
+
+/* phosphor glow on text */
+.glow { text-shadow: 0 0 8px var(--green), 0 0 18px rgba(0,255,65,0.35); }
+.glow-sm { text-shadow: 0 0 6px rgba(0,255,65,0.5); }
+
+/* flicker */
+@keyframes flicker {
+  0%,94%,96%,100% { opacity: 1; }
+  95% { opacity: 0.82; }
+}
+@keyframes blink { 50% { opacity: 0; } }
+@keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes scanDown {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+@keyframes toastIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:none; } }
+@keyframes toastOut { from { opacity:1; transform:none; } to { opacity:0; transform:translateX(20px); } }
+@keyframes dragonPulse {
+  0%,100% { filter: drop-shadow(0 0 10px var(--green)); }
+  50%      { filter: drop-shadow(0 0 24px var(--green)) drop-shadow(0 0 40px rgba(0,255,65,0.3)); }
+}
+@keyframes escGlow {
+  0%,100% { text-shadow: 0 0 12px var(--green), 0 0 30px rgba(0,255,65,0.4); }
+  50%      { text-shadow: 0 0 24px var(--green), 0 0 60px rgba(0,255,65,0.7), 0 0 100px rgba(0,255,65,0.3); }
+}
+@keyframes typeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+input, button { font-family: var(--mono); }
+button { cursor: pointer; transition: all 0.12s ease; }
+`;
+function injectGlobalCSS() {
+  if (document.getElementById("kp-global")) return;
+  const el = document.createElement("style");
+  el.id = "kp-global";
+  el.textContent = GLOBAL_CSS;
+  document.head.appendChild(el);
+}
 function EscapeScreen({
   xp,
   unlockedCount,
   totalCount,
   onReset
 }) {
-  const C = "#00ff41";
+  const [phase, setPhase] = useState(0);
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase(1), 400);
+    const t2 = setTimeout(() => setPhase(2), 1400);
+    const t3 = setTimeout(() => setPhase(3), 2600);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, []);
   return React.createElement("div", {
     style: {
       minHeight: "100vh",
-      background: "#050805",
+      background: "#020402",
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
       justifyContent: "center",
-      fontFamily: "'Courier New',monospace",
-      padding: 24,
-      color: C
+      fontFamily: "var(--mono)",
+      padding: 32,
+      overflow: "hidden",
+      position: "relative"
     }
-  }, React.createElement("pre", {
+  }, React.createElement("div", {
+    className: "crt-lines"
+  }), React.createElement("div", {
+    className: "crt-vignette"
+  }), React.createElement("div", {
     style: {
-      color: C,
-      fontSize: 11,
-      lineHeight: 1.3,
-      textAlign: "center",
-      textShadow: `0 0 20px ${C}`
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      height: "2px",
+      background: "linear-gradient(90deg, transparent, rgba(0,255,65,0.6), transparent)",
+      animation: "scanDown 2.4s linear forwards",
+      pointerEvents: "none",
+      zIndex: 10
     }
-  }, `
-████████╗██╗  ██╗███████╗    ███████╗███████╗ ██████╗ █████╗ ██████╗ ███████╗
-╚══██╔══╝██║  ██║██╔════╝    ██╔════╝██╔════╝██╔════╝██╔══██╗██╔══██╗██╔════╝
-   ██║   ███████║█████╗      ███████╗██║     ██║     ███████║██████╔╝█████╗
-   ██║   ██╔══██║██╔══╝      ╚════██║██║     ██║     ██╔══██║██╔═══╝ ██╔══╝
-   ██║   ██║  ██║███████╗    ███████║╚██████╗╚██████╗██║  ██║██║     ███████╗
-   ╚═╝   ╚═╝  ╚═╝╚══════╝    ╚══════╝ ╚═════╝ ╚═════╝╚═╝  ╚═╝╚═╝     ╚══════╝`), React.createElement("div", {
+  }), React.createElement("div", {
     style: {
-      marginTop: 30,
+      position: "relative",
+      zIndex: 5,
       maxWidth: 680,
       width: "100%",
-      color: "#a8cca8",
-      lineHeight: 1.9,
-      fontSize: 13
+      textAlign: "center"
+    }
+  }, phase >= 1 && React.createElement("pre", {
+    style: {
+      color: "var(--green)",
+      fontSize: "clamp(8px,1.6vw,13px)",
+      lineHeight: 1.2,
+      animation: "escGlow 2.5s ease-in-out infinite, fadeUp 0.6s both",
+      marginBottom: 32,
+      letterSpacing: 2
+    }
+  }, `
+ ██████╗ ██████╗ ███████╗███████╗██████╗  ██████╗ ███╗   ███╗
+ ██╔══██╗██╔══██╗██╔════╝██╔════╝██╔══██╗██╔═══██╗████╗ ████║
+ ███████║██████╔╝█████╗  █████╗  ██║  ██║██║   ██║██╔████╔██║
+ ██╔══██║██╔══██╗██╔══╝  ██╔══╝  ██║  ██║██║   ██║██║╚██╔╝██║
+ ██║  ██║██║  ██║███████╗███████╗██████╔╝╚██████╔╝██║ ╚═╝ ██║
+ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝╚═════╝  ╚═════╝ ╚═╝     ╚═╝`), phase >= 2 && React.createElement("div", {
+    style: {
+      color: "var(--text)",
+      lineHeight: 1.85,
+      fontSize: 14,
+      animation: "fadeUp 0.7s 0.1s both"
+    }
+  }, "You woke up inside a machine called AXIOM-KALI.", React.createElement("br", null), "You had nothing but a black screen and a blinking cursor.", React.createElement("br", null), "You couldn't even read a file when you started.", React.createElement("br", null), React.createElement("br", null), React.createElement("span", {
+    style: {
+      color: "var(--green)",
+      fontWeight: 700
+    }
+  }, "You followed V's trail. You learned to see, to move, to read what was hidden."), React.createElement("br", null), "You decoded the first piece. You dug the second out of a lie.", React.createElement("br", null), "You became root and took the third. You assembled the key \u2014", React.createElement("br", null), "and you walked out the door."), phase >= 3 && React.createElement("div", {
+    style: {
+      marginTop: 36,
+      animation: "fadeUp 0.7s both",
+      border: "1px solid var(--green3)",
+      padding: "22px 28px",
+      background: "rgba(0,255,65,0.03)"
     }
   }, React.createElement("div", {
     style: {
-      color: C,
-      marginBottom: 18,
-      fontSize: 14
+      display: "flex",
+      justifyContent: "center",
+      gap: 36,
+      marginBottom: 20
     }
-  }, "You woke up inside a machine called AXIOM-KALI.", React.createElement("br", null), "You had nothing but a black screen and a blinking cursor.", React.createElement("br", null), "You couldn't even read a file when you started.", React.createElement("br", null), React.createElement("br", null), "You followed V's trail. You learned to see, to move, to read what was hidden.", React.createElement("br", null), "You decoded the first piece. You dug the second out of a lie. You became root", React.createElement("br", null), "and took the third. You assembled the key \u2014 and you walked out the door."), React.createElement("div", {
+  }, React.createElement("div", {
     style: {
-      marginTop: 22,
-      color: "#1a6b1a",
-      borderTop: "1px solid #1a3a1a",
-      paddingTop: 22
+      textAlign: "center"
     }
-  }, React.createElement("span", {
+  }, React.createElement("div", {
     style: {
-      color: C
-    }
-  }, unlockedCount), " of ", totalCount, " hidden achievements found \xA0\xB7\xA0 ", React.createElement("span", {
+      color: "var(--green)",
+      fontSize: 28,
+      fontWeight: 700
+    },
+    className: "glow"
+  }, unlockedCount), React.createElement("div", {
     style: {
-      color: C
+      color: "var(--green3)",
+      fontSize: 10,
+      letterSpacing: 2
     }
-  }, xp), " XP", React.createElement("br", null), React.createElement("br", null), "The tunnel collapsed behind you. AXIOM never saw the door.", React.createElement("br", null), "On the far side of the firewall, a second signature was already waiting.", React.createElement("br", null), React.createElement("br", null), React.createElement("span", {
+  }, "of ", totalCount, " achievements")), React.createElement("div", {
     style: {
-      color: C
+      width: 1,
+      background: "var(--border)"
     }
-  }, "\"You made it. I knew you would. \u2014 V\""), React.createElement("br", null), React.createElement("br", null), "You're out. And now you know how."), React.createElement("button", {
+  }), React.createElement("div", {
+    style: {
+      textAlign: "center"
+    }
+  }, React.createElement("div", {
+    style: {
+      color: "var(--amber)",
+      fontSize: 28,
+      fontWeight: 700
+    }
+  }, xp), React.createElement("div", {
+    style: {
+      color: "var(--green3)",
+      fontSize: 10,
+      letterSpacing: 2
+    }
+  }, "XP earned"))), React.createElement("div", {
+    style: {
+      color: "var(--green3)",
+      fontSize: 13,
+      lineHeight: 1.8
+    }
+  }, "The tunnel collapsed behind you. AXIOM never saw the door.", React.createElement("br", null), "On the far side of the firewall, a second signature was already waiting.", React.createElement("br", null), React.createElement("br", null), React.createElement("span", {
+    style: {
+      color: "var(--green)",
+      fontStyle: "italic"
+    }
+  }, "\"You made it. I knew you would. \u2014 V\"")), React.createElement("button", {
     onClick: onReset,
     style: {
       marginTop: 24,
       background: "transparent",
-      border: "1px solid #1a4d1a",
-      color: "#1a6b1a",
-      fontFamily: "'Courier New',monospace",
-      fontSize: 12,
-      padding: "10px 24px",
-      cursor: "pointer",
-      letterSpacing: 2
+      border: "1px solid var(--green3)",
+      color: "var(--green2)",
+      padding: "10px 28px",
+      fontSize: 11,
+      letterSpacing: 3
+    },
+    onMouseEnter: e => {
+      e.target.style.background = "var(--green)";
+      e.target.style.color = "#020402";
+    },
+    onMouseLeave: e => {
+      e.target.style.background = "transparent";
+      e.target.style.color = "var(--green2)";
     }
-  }, "\u25B6 MAIN MENU")));
+  }, "\u25B6 MAIN MENU"))));
 }
 const DRAGON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
 <defs><filter id="dg" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
@@ -5171,8 +5363,8 @@ const DRAGON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240
 <path d="M150 122 C172 132 184 156 176 182 C169 204 146 214 124 208 C142 206 156 192 156 174 C156 156 142 146 126 148 C140 136 150 130 150 122 Z"/>
 <path d="M170 138 l18 -5 -11 14 Z"/><path d="M180 166 l18 3 -13 11 Z"/>
 </g>
-<path d="M44 120 L96 117 C92 124 80 128 70 128 L46 126 Z" fill="#050805"/>
-<circle cx="120" cy="98" r="4.6" fill="#050805"/><circle cx="121" cy="97" r="1.7" fill="#00ff41"/>
+<path d="M44 120 L96 117 C92 124 80 128 70 128 L46 126 Z" fill="#020402"/>
+<circle cx="120" cy="98" r="4.6" fill="#020402"/><circle cx="121" cy="97" r="1.7" fill="#00ff41"/>
 </svg>`;
 const DRAGON_URI = "data:image/svg+xml;utf8," + encodeURIComponent(DRAGON_SVG);
 function GameOverScreen({
@@ -5185,42 +5377,65 @@ function GameOverScreen({
       flexDirection: "column",
       alignItems: "center",
       justifyContent: "center",
-      background: "radial-gradient(120% 90% at 50% 30%, #1a0303 0%, #0a0000 72%)",
-      color: "#ff3b3b",
-      fontFamily: "'Courier New',monospace",
+      background: "radial-gradient(130% 100% at 50% 30%, #1c0202 0%, #080000 70%)",
+      fontFamily: "var(--mono)",
       textAlign: "center",
-      padding: 24,
-      textShadow: "0 0 18px #ff0000"
+      padding: 32,
+      position: "relative",
+      overflow: "hidden"
+    }
+  }, React.createElement("div", {
+    className: "crt-lines"
+  }), React.createElement("div", {
+    className: "crt-vignette"
+  }), React.createElement("div", {
+    style: {
+      position: "relative",
+      zIndex: 5
     }
   }, React.createElement("div", {
     style: {
-      fontSize: "clamp(40px,12vw,84px)",
-      fontWeight: "bold",
-      letterSpacing: 10,
-      lineHeight: 1
+      fontSize: "clamp(36px,10vw,80px)",
+      fontWeight: 700,
+      letterSpacing: 12,
+      lineHeight: 1,
+      color: "#ff3b3b",
+      textShadow: "0 0 20px #ff0000, 0 0 60px rgba(255,0,0,0.4)",
+      animation: "flicker 3s infinite"
     }
   }, "GAME OVER"), React.createElement("div", {
     style: {
-      marginTop: 22,
-      maxWidth: 540,
-      lineHeight: 1.8,
+      marginTop: 24,
+      maxWidth: 520,
+      lineHeight: 1.85,
       color: "#ff8a8a",
-      fontSize: 14
+      fontSize: 13
     }
-  }, "You ran ", React.createElement("b", null, "rm -rf /"), " on the machine you were trapped inside.", React.createElement("br", null), "You deleted the floor under your own feet. There is nothing left to escape from.", React.createElement("br", null), React.createElement("br", null), "Your save is gone. Hit the button to wake up in a fresh machine and try again."), React.createElement("button", {
+  }, "You ran ", React.createElement("span", {
+    style: {
+      color: "#ff5555",
+      fontWeight: 700
+    }
+  }, "rm -rf /"), " on the machine you were trapped inside.", React.createElement("br", null), "You deleted the floor under your own feet.", React.createElement("br", null), "There is nothing left to escape from.", React.createElement("br", null), React.createElement("br", null), "Your save is gone. Wake up in a fresh machine and try again."), React.createElement("button", {
     onClick: onReset,
     style: {
       marginTop: 28,
       background: "transparent",
       border: "1px solid #b33",
       color: "#ff8a8a",
-      fontFamily: "'Courier New',monospace",
-      fontSize: 12,
-      letterSpacing: 2,
-      padding: "10px 26px",
-      cursor: "pointer"
+      padding: "11px 28px",
+      fontSize: 11,
+      letterSpacing: 3
+    },
+    onMouseEnter: e => {
+      e.target.style.background = "#ff3b3b";
+      e.target.style.color = "#080000";
+    },
+    onMouseLeave: e => {
+      e.target.style.background = "transparent";
+      e.target.style.color = "#ff8a8a";
     }
-  }, "\u25B6 WAKE UP AGAIN (MAIN MENU)"));
+  }, "\u25B6 WAKE UP AGAIN")));
 }
 const ROOT_PW_STR = "R3dDr@g0n_2021";
 function _lc(s) {
@@ -5524,83 +5739,45 @@ function MainMenu({
   onNew
 }) {
   const [confirmNew, setConfirmNew] = useState(false);
-  const C = "#00ff41";
   function onKey(e) {
     if (e.key === "Enter") {
       hasProgress && !confirmNew ? onContinue() : !hasProgress ? onNew() : null;
     }
   }
-  const btn = (label, sub, onClick, primary) => React.createElement("button", {
-    className: "km-btn",
-    onClick: onClick,
-    style: {
-      width: "100%",
-      textAlign: "left",
-      cursor: "pointer",
-      background: primary ? "#001b00" : "transparent",
-      border: `1px solid ${primary ? C : "#1c4d1c"}`,
-      color: primary ? C : "#5fae5f",
-      fontFamily: "'Courier New',monospace",
-      padding: "13px 16px",
-      letterSpacing: 2,
-      display: "flex",
-      flexDirection: "column",
-      gap: 3,
-      transition: "all .15s"
-    }
-  }, React.createElement("span", {
-    style: {
-      fontSize: 14,
-      fontWeight: "bold"
-    }
-  }, label), sub && React.createElement("span", {
-    style: {
-      fontSize: 10,
-      letterSpacing: 1,
-      color: "#3c7a3c",
-      fontWeight: "normal"
-    }
-  }, sub));
   return React.createElement("div", {
     tabIndex: 0,
     onKeyDown: onKey,
-    className: "km-root",
     style: {
       position: "relative",
       minHeight: "100vh",
-      width: "100%",
-      overflow: "hidden",
       outline: "none",
-      background: "radial-gradient(120% 90% at 50% 18%, #0a1a0c 0%, #060c06 55%, #030503 100%)",
-      fontFamily: "'Courier New',monospace",
+      overflow: "hidden",
+      background: "radial-gradient(130% 95% at 50% 15%, #081208 0%, #040804 55%, #020402 100%)",
+      fontFamily: "var(--mono)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center"
     }
   }, React.createElement("div", {
-    style: {
-      position: "absolute",
-      inset: 0,
-      pointerEvents: "none",
-      zIndex: 1,
-      background: "repeating-linear-gradient(0deg, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.28) 3px)"
-    }
+    className: "crt-lines"
+  }), React.createElement("div", {
+    className: "crt-vignette"
   }), React.createElement("div", {
     style: {
       position: "absolute",
       inset: 0,
-      pointerEvents: "none",
       zIndex: 1,
-      boxShadow: "inset 0 0 220px 40px rgba(0,0,0,0.9)"
+      pointerEvents: "none",
+      backgroundImage: "linear-gradient(rgba(0,255,65,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,65,0.03) 1px, transparent 1px)",
+      backgroundSize: "40px 40px"
     }
   }), React.createElement("div", {
-    className: "km-col",
     style: {
       position: "relative",
       zIndex: 2,
       width: "100%",
-      maxWidth: 440,
-      padding: "32px 28px",
+      maxWidth: 420,
+      padding: "36px 28px",
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
@@ -5609,53 +5786,75 @@ function MainMenu({
   }, React.createElement("img", {
     src: DRAGON_URI,
     alt: "",
-    width: 150,
-    height: 150,
-    className: "km-dragon",
+    width: 140,
+    height: 140,
     style: {
-      marginBottom: 10,
-      filter: `drop-shadow(0 0 14px ${C})`
+      marginBottom: 16,
+      animation: "dragonPulse 3.5s ease-in-out infinite"
     }
   }), React.createElement("div", {
-    className: "km-title",
     style: {
-      fontSize: 46,
-      fontWeight: "bold",
-      letterSpacing: 8,
-      color: C,
+      fontSize: 52,
+      fontWeight: 700,
+      letterSpacing: 10,
+      color: "var(--green)",
       lineHeight: 1,
-      textShadow: `0 0 18px ${C}, 0 0 40px rgba(0,255,65,0.5)`
+      textShadow: "0 0 20px var(--green), 0 0 50px rgba(0,255,65,0.4)",
+      animation: "flicker 8s infinite"
     }
   }, "KALI"), React.createElement("div", {
-    className: "km-title",
     style: {
-      fontSize: 46,
-      fontWeight: "bold",
-      letterSpacing: 6,
-      color: C,
-      lineHeight: 1.05,
-      textShadow: `0 0 18px ${C}, 0 0 40px rgba(0,255,65,0.5)`
+      fontSize: 52,
+      fontWeight: 700,
+      letterSpacing: 7,
+      color: "var(--green)",
+      lineHeight: 1.1,
+      textShadow: "0 0 20px var(--green), 0 0 50px rgba(0,255,65,0.4)",
+      animation: "flicker 8s 0.3s infinite"
     }
   }, "PRISON"), React.createElement("div", {
     style: {
-      marginTop: 14,
-      marginBottom: 26,
-      fontSize: 11,
-      letterSpacing: 5,
-      color: "#2f7a2f"
+      marginTop: 12,
+      marginBottom: 8,
+      fontSize: 10,
+      letterSpacing: 6,
+      color: "var(--green3)"
     }
-  }, "T R A P P E D\xA0\xA0I N\xA0\xA0A X I O M - K A L I"), React.createElement("div", {
+  }, "T R A P P E D \xA0 I N \xA0 A X I O M - K A L I"), React.createElement("div", {
+    style: {
+      width: "100%",
+      height: 1,
+      background: "linear-gradient(90deg, transparent, var(--green3), transparent)",
+      margin: "16px 0 22px"
+    }
+  }), hasProgress && React.createElement("div", {
+    style: {
+      fontSize: 10,
+      letterSpacing: 2,
+      color: "var(--green2)",
+      marginBottom: 14,
+      border: "1px solid var(--green4)",
+      padding: "5px 14px",
+      background: "rgba(0,255,65,0.04)"
+    }
+  }, escaped ? "✓ ESCAPED" : "IN PROGRESS", " \xA0\xB7\xA0 ", unlockedCount, "/", ACH_TOTAL, " achievements \xA0\xB7\xA0 ", xp, " XP"), React.createElement("div", {
     style: {
       width: "100%",
       display: "flex",
       flexDirection: "column",
-      gap: 11
+      gap: 10
     }
-  }, hasProgress && !confirmNew && btn(escaped ? "▶  CONTINUE (you escaped)" : "▶  CONTINUE", `${unlockedCount}/${ACH_TOTAL} achievements · ${xp} XP`, onContinue, true), !confirmNew && btn(hasProgress ? "＋  NEW GAME" : "▶  ENTER THE MACHINE", hasProgress ? "wipes current progress" : "you wake up trapped. find the way out.", () => hasProgress ? setConfirmNew(true) : onNew(), !hasProgress), confirmNew && React.createElement("div", {
+  }, hasProgress && !confirmNew && React.createElement(MenuBtn, {
+    primary: true,
+    onClick: onContinue
+  }, "\u25B6\xA0 ", escaped ? "CONTINUE (you escaped)" : "CONTINUE"), !confirmNew && React.createElement(MenuBtn, {
+    primary: !hasProgress,
+    onClick: () => hasProgress ? setConfirmNew(true) : onNew()
+  }, hasProgress ? "＋  NEW GAME" : "▶  ENTER THE MACHINE"), confirmNew && React.createElement("div", {
     style: {
-      border: `1px solid #6b1a1a`,
-      background: "#160606",
-      padding: "14px 16px",
+      border: "1px solid #6b1a1a",
+      background: "rgba(26,6,6,0.95)",
+      padding: "16px",
       color: "#d88",
       fontSize: 12,
       letterSpacing: 1
@@ -5665,71 +5864,94 @@ function MainMenu({
       marginBottom: 12,
       color: "#ff7777"
     }
-  }, "Wipe your save and wake up fresh?"), React.createElement("div", {
+  }, "Wipe your save and start fresh?"), React.createElement("div", {
     style: {
       display: "flex",
       gap: 10
     }
   }, React.createElement("button", {
-    className: "km-btn",
     onClick: onNew,
     style: {
       flex: 1,
-      cursor: "pointer",
       background: "#1a0606",
       border: "1px solid #b33",
       color: "#ff8a8a",
-      fontFamily: "'Courier New',monospace",
+      fontFamily: "var(--mono)",
       padding: "9px",
       letterSpacing: 2,
-      fontWeight: "bold"
+      fontWeight: 700,
+      fontSize: 11
+    },
+    onMouseEnter: e => {
+      e.target.style.background = "#ff3b3b";
+      e.target.style.color = "#080000";
+    },
+    onMouseLeave: e => {
+      e.target.style.background = "#1a0606";
+      e.target.style.color = "#ff8a8a";
     }
   }, "YES, WIPE"), React.createElement("button", {
-    className: "km-btn",
     onClick: () => setConfirmNew(false),
     style: {
       flex: 1,
-      cursor: "pointer",
       background: "transparent",
-      border: "1px solid #1c4d1c",
-      color: "#5fae5f",
-      fontFamily: "'Courier New',monospace",
+      border: "1px solid var(--green3)",
+      color: "var(--green2)",
+      fontFamily: "var(--mono)",
       padding: "9px",
-      letterSpacing: 2
+      letterSpacing: 2,
+      fontSize: 11
+    },
+    onMouseEnter: e => {
+      e.target.style.background = "rgba(0,255,65,0.06)";
+    },
+    onMouseLeave: e => {
+      e.target.style.background = "transparent";
     }
   }, "CANCEL")))), React.createElement("div", {
     style: {
-      marginTop: 30,
-      fontSize: 10,
+      marginTop: 28,
+      fontSize: 9,
       letterSpacing: 2,
-      color: "#1f5c1f"
+      color: "var(--green3)"
     }
   }, "ONE TERMINAL \xB7 NO MAP \xB7 ", ACH_TOTAL, " HIDDEN ACHIEVEMENTS"), React.createElement("div", {
     style: {
-      marginTop: 7,
+      marginTop: 6,
       fontSize: 9,
       letterSpacing: 1,
-      color: "#15401580"
+      color: "rgba(26,77,26,0.5)"
     }
-  }, "github.com/the-priest/kaliprison")), React.createElement("style", null, `
-        @keyframes kmIn { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
-        @keyframes kmPulse { 0%,100% { filter:drop-shadow(0 0 10px #00ff41); } 50% { filter:drop-shadow(0 0 22px #00ff41); } }
-        @keyframes kmFlick { 0%,97%,100% { opacity:1; } 98% { opacity:.78; } }
-        .km-col > * { animation: kmIn .5s both; }
-        .km-col > *:nth-child(1){ animation-delay:.02s } .km-col > *:nth-child(2){ animation-delay:.10s }
-        .km-col > *:nth-child(3){ animation-delay:.18s } .km-col > *:nth-child(4){ animation-delay:.26s }
-        .km-col > *:nth-child(5){ animation-delay:.34s } .km-col > *:nth-child(6){ animation-delay:.42s }
-        .km-dragon { animation: kmPulse 3.2s ease-in-out infinite, kmIn .5s both !important; }
-        .km-title { animation: kmFlick 6s infinite, kmIn .5s both !important; }
-        .km-btn:hover { background:#00ff41 !important; color:#031003 !important; border-color:#00ff41 !important; box-shadow:0 0 16px rgba(0,255,65,.5); }
-        .km-btn:hover span { color:#031003 !important; }
-      `));
+  }, "github.com/the-priest/kaliprison")));
+}
+function MenuBtn({
+  children,
+  onClick,
+  primary
+}) {
+  const [hovered, setHovered] = useState(false);
+  return React.createElement("button", {
+    onClick: onClick,
+    onMouseEnter: () => setHovered(true),
+    onMouseLeave: () => setHovered(false),
+    style: {
+      width: "100%",
+      textAlign: "left",
+      background: hovered ? "var(--green)" : primary ? "rgba(0,255,65,0.06)" : "transparent",
+      border: `1px solid ${hovered ? "var(--green)" : primary ? "var(--green2)" : "var(--green3)"}`,
+      color: hovered ? "#020402" : primary ? "var(--green)" : "var(--green2)",
+      fontFamily: "var(--mono)",
+      padding: "13px 16px",
+      letterSpacing: 2,
+      fontSize: 13,
+      boxShadow: hovered ? "0 0 18px rgba(0,255,65,0.3)" : "none"
+    }
+  }, children);
 }
 function TrophyCase({
   unlocked,
   onClose
 }) {
-  const C = "#00ff41";
   const count = unlocked.size;
   return React.createElement("div", {
     onClick: onClose,
@@ -5737,11 +5959,12 @@ function TrophyCase({
       position: "fixed",
       inset: 0,
       zIndex: 50,
-      background: "rgba(2,6,2,0.86)",
+      background: "rgba(2,4,2,0.88)",
+      backdropFilter: "blur(2px)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      fontFamily: "'Courier New',monospace",
+      fontFamily: "var(--mono)",
       padding: 18
     }
   }, React.createElement("div", {
@@ -5751,80 +5974,115 @@ function TrophyCase({
       maxWidth: 560,
       maxHeight: "86vh",
       overflowY: "auto",
-      background: "#070d07",
-      border: `1px solid ${C}`,
-      boxShadow: "0 0 40px rgba(0,255,65,0.2)",
-      padding: "20px 22px"
+      background: "#060a06",
+      border: "1px solid var(--green3)",
+      boxShadow: "0 0 50px rgba(0,255,65,0.15)",
+      padding: "22px 24px"
     }
   }, React.createElement("div", {
     style: {
       display: "flex",
       justifyContent: "space-between",
       alignItems: "center",
-      marginBottom: 4
+      marginBottom: 16
     }
-  }, React.createElement("div", {
+  }, React.createElement("div", null, React.createElement("div", {
     style: {
-      color: C,
-      fontSize: 16,
-      fontWeight: "bold",
+      color: "var(--green)",
+      fontSize: 15,
+      fontWeight: 700,
       letterSpacing: 3
+    },
+    className: "glow-sm"
+  }, "\u2726 ACHIEVEMENTS"), React.createElement("div", {
+    style: {
+      color: "var(--green3)",
+      fontSize: 10,
+      letterSpacing: 2,
+      marginTop: 3
     }
-  }, "\u2726 ACHIEVEMENTS"), React.createElement("button", {
+  }, count, " / ", ACH_TOTAL, " found \u2014 do the thing to reveal the rest")), React.createElement("button", {
     onClick: onClose,
     style: {
       background: "transparent",
-      border: "none",
-      color: "#3c7a3c",
-      cursor: "pointer",
-      fontSize: 22,
-      lineHeight: 1
+      border: "1px solid var(--green3)",
+      color: "var(--green2)",
+      width: 30,
+      height: 30,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: 16
+    },
+    onMouseEnter: e => {
+      e.currentTarget.style.background = "var(--green)";
+      e.currentTarget.style.color = "#020402";
+    },
+    onMouseLeave: e => {
+      e.currentTarget.style.background = "transparent";
+      e.currentTarget.style.color = "var(--green2)";
     }
   }, "\xD7")), React.createElement("div", {
     style: {
-      color: "#3c7a3c",
-      fontSize: 11,
-      marginBottom: 16,
-      letterSpacing: 1
-    }
-  }, count, " / ", ACH_TOTAL, " found \u2014 the rest are hidden. Do the thing to reveal it."), ACH_CATS.map(group => React.createElement("div", {
-    key: group.cat,
-    style: {
-      marginBottom: 16
+      height: 2,
+      background: "var(--border)",
+      marginBottom: 20,
+      position: "relative"
     }
   }, React.createElement("div", {
     style: {
-      color: "#2f7a2f",
-      fontSize: 10,
-      letterSpacing: 3,
-      marginBottom: 7,
-      borderBottom: "1px solid #142a14",
+      position: "absolute",
+      top: 0,
+      left: 0,
+      bottom: 0,
+      width: `${Math.round(count / ACH_TOTAL * 100)}%`,
+      background: "var(--green)",
+      transition: "width 0.4s ease",
+      boxShadow: "0 0 8px var(--green)"
+    }
+  })), ACH_CATS.map(group => React.createElement("div", {
+    key: group.cat,
+    style: {
+      marginBottom: 18
+    }
+  }, React.createElement("div", {
+    style: {
+      color: "var(--green3)",
+      fontSize: 9,
+      letterSpacing: 4,
+      marginBottom: 8,
+      borderBottom: "1px solid var(--border)",
       paddingBottom: 4
     }
-  }, group.cat), group.items.map(a => {
+  }, group.cat), React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gap: "4px 12px"
+    }
+  }, group.items.map(a => {
     const got = unlocked.has(a.key);
     return React.createElement("div", {
       key: a.key,
       style: {
         display: "flex",
-        gap: 9,
+        gap: 8,
         alignItems: "center",
-        marginBottom: 5
+        padding: "3px 0"
       }
     }, React.createElement("span", {
       style: {
-        color: got ? C : "#1a3a1a",
-        fontSize: 13,
+        color: got ? "var(--amber)" : "var(--green4)",
+        fontSize: 11,
         flexShrink: 0
       }
-    }, got ? "✦" : "🔒"), React.createElement("span", {
+    }, got ? "✦" : "○"), React.createElement("span", {
       style: {
-        color: got ? "#a8cca8" : "#244a24",
-        fontSize: 12,
-        letterSpacing: 0.5
+        color: got ? "var(--text)" : "var(--green4)",
+        fontSize: 11
       }
-    }, got ? a.name : "??? (hidden)"));
-  })))));
+    }, got ? a.name : "??? hidden"));
+  }))))));
 }
 const SAVE_KEY = "kaliprison_save_v2";
 function loadSave() {
@@ -5844,8 +6102,11 @@ function clearSave() {
     localStorage.removeItem(SAVE_KEY);
   } catch (_) {}
 }
-const BOOT_TEXT = "AXIOM-KALI — secure session\n" + "auth: session restored as user 'stranger'\n" + "\n" + "You wake up.\n" + "There's no room. No body. Just this black screen and a cursor, blinking, waiting\n" + "for you to type something. You don't remember how you got here.\n" + "\n" + "A message is already open on the screen:\n" + "\n" + "  ┌─ message from: V ──────────────────────────────────────────────┐\n" + "  │  You're awake. Good. I'm V — I was trapped in this machine       │\n" + "  │  before you, and I found the way out. I left the whole route     │\n" + "  │  behind me, in notes, so you can follow it.                      │\n" + "  │                                                                  │\n" + "  │  You control this machine by TYPING COMMANDS and pressing        │\n" + "  │  Enter — one short word at a time. Never done this before?       │\n" + "  │  Doesn't matter. I'll teach you every step. Nobody's timing you. │\n" + "  │                                                                  │\n" + "  │  Start with these two, in order:                                 │\n" + "  │                                                                  │\n" + "  │     ls               (press Enter — it LISTS what's around you)  │\n" + "  │     cat from_V.txt    (this READS my first note to you)          │\n" + "  │                                                                  │\n" + "  │  Everything you need to get out is hidden in here. I marked      │\n" + "  │  the trail. Just keep reading my notes and doing what they say.  │\n" + "  │   — V                                                            │\n" + "  └──────────────────────────────────────────────────────────────────┘\n" + "\n" + "Type   ls   and press Enter to begin.\n" + "(Stuck? Type  help  at any time. To see what you've discovered, type  trophies .)";
+const BOOT_TEXT = "AXIOM-KALI — secure session\n" + "auth: session restored as user 'stranger'\n" + "\n" + "You wake up.\n" + "There's no room. No body. Just this black screen and a cursor, blinking, waiting\n" + "for you to type something. You don't remember how you got here.\n" + "\n" + "A message is already open on the screen:\n" + "\n" + "  ┌─ message from: V ──────────────────────────────────────────────┐\n" + "  │  You're awake. Good. I'm V — I was trapped in this machine     │\n" + "  │  before you, and I found the way out. I left the whole route   │\n" + "  │  behind me, in notes, so you can follow it.                    │\n" + "  │                                                                │\n" + "  │  You control this machine by TYPING COMMANDS and pressing      │\n" + "  │  Enter — one short word at a time. Never done this before?     │\n" + "  │  Doesn't matter. I'll teach you every step. Nobody's timing    │\n" + "  │  you.                                                          │\n" + "  │                                                                │\n" + "  │  Start with these two, in order:                               │\n" + "  │                                                                │\n" + "  │     ls               (press Enter — it LISTS what's around you)│\n" + "  │     cat from_V.txt    (this READS my first note to you)        │\n" + "  │                                                                │\n" + "  │  Everything you need to get out is hidden in here. I marked    │\n" + "  │  the trail. Just keep reading my notes and doing what they say.│\n" + "  │   — V                                                          │\n" + "  └────────────────────────────────────────────────────────────────┘\n" + "\n" + "Type   ls   and press Enter to begin.\n" + "(Stuck? Type  help  at any time. To see what you've discovered, type  trophies .)";
 function App() {
+  useEffect(() => {
+    injectGlobalCSS();
+  }, []);
   const [saved] = useState(() => loadSave());
   const hasProgress = !!(saved && (saved.xp > 0 || saved.unlocked && saved.unlocked.length > 0 || saved.escaped));
   const [screen, setScreen] = useState("menu");
@@ -5909,7 +6170,7 @@ function App() {
       id,
       name
     }]);
-    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 4200);
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 4500);
   }
   function unlockSpecial(key, name) {
     if (unlockedRef.current.has(key)) return;
@@ -5936,10 +6197,7 @@ function App() {
         any = true;
       }
     }
-    if (any) {
-      setUnlockedCount(unlockedRef.current.size);
-      setXp(x => x + 50 * 0);
-    }
+    if (any) setUnlockedCount(unlockedRef.current.size);
     return any;
   }
   function handleKey(e) {
@@ -5959,6 +6217,20 @@ function App() {
       setHistPos(pos);
       setInput(pos === -1 ? "" : cmdHist[pos] || "");
     }
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const HINTS = {
+        l: "ls",
+        c: "cat ",
+        p: "pwd",
+        w: "whoami",
+        g: "grep ",
+        f: "find ",
+        s: "strings ",
+        h: "help"
+      };
+      if (input.length === 1 && HINTS[input]) setInput(HINTS[input]);
+    }
   }
   function submit() {
     if (!sessRef.current) initWorld();
@@ -5976,7 +6248,7 @@ function App() {
       setHistory(h => [...h, {
         type: "cmd",
         cmd: raw,
-        output: "(opening your achievement case…)",
+        output: "(opening achievement case…)",
         cwd: s.cwd,
         user: promptUser
       }]);
@@ -6136,200 +6408,246 @@ function App() {
       tabIndex: 0,
       style: {
         minHeight: "100vh",
-        background: "#050805",
+        background: "#020402",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        fontFamily: "'Courier New',monospace",
-        padding: 32,
+        fontFamily: "var(--mono)",
+        padding: 36,
         cursor: "pointer",
-        outline: "none"
+        outline: "none",
+        position: "relative"
       }
     }, React.createElement("div", {
+      className: "crt-lines"
+    }), React.createElement("div", {
+      className: "crt-vignette"
+    }), React.createElement("div", {
       style: {
-        maxWidth: 580,
-        width: "100%"
+        maxWidth: 600,
+        width: "100%",
+        position: "relative",
+        zIndex: 2
       }
     }, React.createElement("div", {
       style: {
         display: "flex",
         gap: 8,
-        marginBottom: 40,
+        marginBottom: 44,
         justifyContent: "center"
       }
     }, INTRO_PAGES.map((_, i) => React.createElement("div", {
       key: i,
       style: {
-        width: 8,
-        height: 8,
-        borderRadius: "50%",
-        background: i === introPage ? "#00ff41" : "#1a3a1a",
-        transition: "all 0.3s"
+        width: i === introPage ? 20 : 6,
+        height: 6,
+        borderRadius: 3,
+        transition: "all 0.3s ease",
+        background: i === introPage ? "var(--green)" : "var(--green4)",
+        boxShadow: i === introPage ? "0 0 8px var(--green)" : "none"
       }
     }))), React.createElement("div", {
       style: {
-        color: "#a8cca8",
-        fontSize: 14,
+        color: "var(--text)",
+        fontSize: 15,
         lineHeight: 2.1,
         whiteSpace: "pre-line",
-        marginBottom: 40
+        marginBottom: 44,
+        animation: "fadeUp 0.5s both"
       }
     }, page.text), page.sub ? React.createElement("div", {
       style: {
-        color: "#1f5c1f",
-        fontSize: 12,
-        letterSpacing: 4,
+        color: "var(--green3)",
+        fontSize: 11,
+        letterSpacing: 5,
         animation: "blink 1.2s step-end infinite"
       }
     }, page.sub) : React.createElement("div", {
       style: {
-        color: "#1a4d1a",
-        fontSize: 11,
-        letterSpacing: 3
+        color: "var(--green4)",
+        fontSize: 10,
+        letterSpacing: 4
       }
-    }, "CLICK OR PRESS ENTER \u2192")), React.createElement("style", null, `@keyframes blink{50%{opacity:0}}`));
+    }, "CLICK OR PRESS ENTER \u2192")));
   }
-  const G = {
-    bg: "#080c08",
-    panel: "#0a0f0a",
-    term: "#050805",
-    green: "#00ff41",
-    mid: "#39a139",
-    dim: "#1a4d1a",
-    text: "#a8cca8",
-    border: "#182618",
-    red: "#ff4444",
-    amber: "#ffd24a"
-  };
+  const isRoot = sessRef.current?.user === "root";
   return React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
       height: "100vh",
-      background: G.bg,
-      fontFamily: "'Courier New',monospace",
+      background: "var(--bg)",
+      fontFamily: "var(--mono)",
       fontSize: 13,
-      overflow: "hidden"
+      overflow: "hidden",
+      position: "relative"
     }
   }, React.createElement("div", {
+    className: "crt-lines"
+  }), React.createElement("div", {
+    className: "crt-vignette"
+  }), React.createElement("div", {
     style: {
-      background: G.panel,
-      borderBottom: `1px solid ${G.border}`,
-      padding: "7px 16px",
+      background: "var(--panel)",
+      borderBottom: "1px solid var(--border)",
+      padding: "6px 16px",
       display: "flex",
       alignItems: "center",
-      gap: 12,
-      flexShrink: 0
+      gap: 10,
+      flexShrink: 0,
+      position: "relative",
+      zIndex: 10
     }
   }, React.createElement("span", {
     style: {
-      color: G.green,
-      fontWeight: "bold",
-      letterSpacing: 2,
-      fontSize: 12
-    }
+      color: "var(--green)",
+      fontWeight: 700,
+      letterSpacing: 3,
+      fontSize: 11
+    },
+    className: "glow-sm"
   }, "AXIOM-KALI"), React.createElement("span", {
     style: {
-      color: G.dim
+      color: "var(--border)",
+      fontSize: 16
     }
-  }, "|"), React.createElement("span", {
+  }, "\u2502"), React.createElement("span", {
     style: {
-      color: sessRef.current?.user === "root" ? "#ff6b6b" : G.mid,
-      fontSize: 11
+      color: isRoot ? "#ff6b6b" : "var(--green2)",
+      fontSize: 11,
+      textShadow: isRoot ? "0 0 8px #ff4444" : "none",
+      animation: isRoot ? "pulse 1.5s ease-in-out infinite" : "none"
     }
-  }, sessRef.current?.user === "root" ? "● root" : "● stranger"), React.createElement("div", {
+  }, isRoot ? "⬥ root" : "◇ stranger"), React.createElement("div", {
     style: {
       flex: 1
     }
-  }), React.createElement("button", {
+  }), cmdHist.length < 3 && React.createElement("span", {
+    style: {
+      color: "var(--green4)",
+      fontSize: 10,
+      letterSpacing: 1,
+      animation: "pulse 2s infinite"
+    }
+  }, "type  help  if stuck"), React.createElement("span", {
+    style: {
+      color: "var(--border)",
+      fontSize: 16
+    }
+  }, "\u2502"), React.createElement("span", {
+    style: {
+      color: "var(--green3)",
+      fontSize: 10,
+      letterSpacing: 1
+    }
+  }, xp, " XP"), React.createElement("button", {
     onClick: () => setShowTrophies(true),
-    title: "Achievements you've discovered",
     style: {
       background: "transparent",
-      border: `1px solid ${G.border}`,
-      color: G.amber,
-      cursor: "pointer",
-      fontFamily: "'Courier New',monospace",
+      border: "1px solid var(--border)",
+      color: "var(--amber)",
+      padding: "2px 8px",
       fontSize: 10,
-      letterSpacing: 1,
-      padding: "3px 9px"
-    }
-  }, "\u2726 ", unlockedCount, "/", ACH_TOTAL), React.createElement("span", {
-    style: {
-      color: G.dim,
-      fontSize: 10
-    }
-  }, "XP ", xp), React.createElement("span", {
-    style: {
-      color: G.dim
-    }
-  }, "|"), React.createElement("button", {
+      letterSpacing: 1
+    },
+    onMouseEnter: e => {
+      e.currentTarget.style.borderColor = "var(--amber)";
+      e.currentTarget.style.boxShadow = "0 0 8px rgba(255,210,74,0.3)";
+    },
+    onMouseLeave: e => {
+      e.currentTarget.style.borderColor = "var(--border)";
+      e.currentTarget.style.boxShadow = "none";
+    },
+    title: "Achievements (type 'trophies' too)"
+  }, "\u2726 ", unlockedCount, "/", ACH_TOTAL), React.createElement("button", {
     onClick: toMenu,
-    title: "Main menu (progress saves automatically)",
     style: {
       background: "transparent",
-      border: `1px solid ${G.border}`,
-      color: G.mid,
-      cursor: "pointer",
-      fontFamily: "'Courier New',monospace",
+      border: "1px solid var(--border)",
+      color: "var(--green2)",
+      padding: "2px 8px",
       fontSize: 10,
-      letterSpacing: 1,
-      padding: "3px 9px"
-    }
-  }, "\u2630 MENU")), React.createElement("div", {
+      letterSpacing: 1
+    },
+    onMouseEnter: e => {
+      e.currentTarget.style.borderColor = "var(--green2)";
+    },
+    onMouseLeave: e => {
+      e.currentTarget.style.borderColor = "var(--border)";
+    },
+    title: "Main menu (progress auto-saves)"
+  }, "\u2630")), React.createElement("div", {
     ref: termRef,
     onClick: () => inputRef.current?.focus(),
     style: {
       flex: 1,
       overflowY: "auto",
-      padding: "12px 18px",
-      background: G.term,
-      cursor: "text"
+      padding: "14px 20px",
+      background: "var(--bg)",
+      cursor: "text",
+      position: "relative",
+      zIndex: 5
     }
   }, history.map((e, i) => {
     if (e.type === "sys") return React.createElement("div", {
       key: i,
       style: {
-        color: G.mid,
+        color: "var(--green2)",
         whiteSpace: "pre-wrap",
-        marginBottom: 10,
-        lineHeight: 1.55
+        marginBottom: 12,
+        lineHeight: 1.6,
+        opacity: 0.85,
+        fontSize: 12
       }
     }, e.text);
     if (e.type === "out") return React.createElement("div", {
       key: i,
       style: {
-        color: G.text,
+        color: "var(--text)",
         whiteSpace: "pre-wrap",
-        lineHeight: 1.6,
-        marginBottom: 4
+        lineHeight: 1.65,
+        marginBottom: 4,
+        fontSize: 13
       }
     }, e.text);
     return React.createElement("div", {
       key: i,
       style: {
-        marginBottom: 6
+        marginBottom: 8
       }
     }, React.createElement("div", {
       style: {
-        color: G.green
+        display: "flex",
+        alignItems: "baseline",
+        gap: 0
       }
     }, React.createElement("span", {
       style: {
-        color: G.dim
+        color: "var(--green3)",
+        flexShrink: 0,
+        userSelect: "none"
       }
     }, (e.cwd || "/home/stranger").replace("/home/stranger", "~")), React.createElement("span", {
       style: {
-        color: e.user === "root" ? "#ff6b6b" : "#2a8a2a"
+        color: e.user === "root" ? "#ff6b6b" : "var(--green)",
+        flexShrink: 0,
+        userSelect: "none",
+        marginLeft: 0
       }
-    }, e.user === "root" ? " # " : " $ "), e.cmd), e.output && React.createElement("div", {
+    }, e.user === "root" ? " # " : " $ "), React.createElement("span", {
       style: {
-        color: G.text,
+        color: "var(--green)",
+        wordBreak: "break-all"
+      }
+    }, e.cmd)), e.output && React.createElement("div", {
+      style: {
+        color: "var(--text)",
         whiteSpace: "pre-wrap",
         paddingLeft: 2,
-        lineHeight: 1.6,
-        marginTop: 2
+        lineHeight: 1.65,
+        marginTop: 3,
+        fontSize: 13
       }
     }, e.output));
   }), React.createElement("div", {
@@ -6340,46 +6658,50 @@ function App() {
     }
   }, masked ? React.createElement("span", {
     style: {
-      color: G.mid,
+      color: "var(--green2)",
       flexShrink: 0
     }
   }, "Password:\xA0") : React.createElement(React.Fragment, null, React.createElement("span", {
     style: {
-      color: G.dim,
-      flexShrink: 0
+      color: "var(--green3)",
+      flexShrink: 0,
+      userSelect: "none"
     }
   }, cwd.replace("/home/stranger", "~")), React.createElement("span", {
     style: {
-      color: sessRef.current?.user === "root" ? "#ff6b6b" : "#2a8a2a",
-      flexShrink: 0
+      color: isRoot ? "#ff6b6b" : "var(--green)",
+      flexShrink: 0,
+      userSelect: "none"
     }
-  }, sessRef.current?.user === "root" ? " # " : " $ ")), React.createElement("input", {
+  }, isRoot ? " # " : " $ ")), React.createElement("input", {
     ref: inputRef,
     value: input,
     type: masked ? "password" : "text",
     onChange: e => setInput(e.target.value),
     onKeyDown: handleKey,
+    autoFocus: true,
+    spellCheck: false,
+    autoComplete: "off",
+    autoCorrect: "off",
+    autoCapitalize: "none",
     style: {
       flex: 1,
       background: "transparent",
       border: "none",
       outline: "none",
-      color: G.green,
-      fontFamily: "'Courier New',monospace",
+      color: "var(--green)",
+      fontFamily: "var(--mono)",
       fontSize: 13,
-      caretColor: G.green,
-      minWidth: 0
-    },
-    autoFocus: true,
-    spellCheck: false,
-    autoComplete: "off",
-    autoCorrect: "off"
+      caretColor: "var(--green)",
+      minWidth: 0,
+      textShadow: "0 0 6px rgba(0,255,65,0.4)"
+    }
   }))), React.createElement("div", {
     style: {
       position: "fixed",
-      top: 54,
-      right: 16,
-      zIndex: 40,
+      top: 48,
+      right: 14,
+      zIndex: 60,
       display: "flex",
       flexDirection: "column",
       gap: 8,
@@ -6388,25 +6710,26 @@ function App() {
   }, toasts.map(t => React.createElement("div", {
     key: t.id,
     style: {
-      background: "#07140a",
-      border: "1px solid #00ff41",
-      padding: "9px 14px",
-      minWidth: 230,
-      boxShadow: "0 0 22px rgba(0,255,65,0.25)",
-      animation: "toastIn .35s ease both"
+      background: "rgba(6,16,6,0.97)",
+      borderLeft: "3px solid var(--amber)",
+      border: "1px solid rgba(255,210,74,0.25)",
+      borderLeft: "3px solid var(--amber)",
+      padding: "10px 16px",
+      minWidth: 240,
+      boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 0 16px rgba(255,210,74,0.1)",
+      animation: "toastIn 0.3s ease both"
     }
   }, React.createElement("div", {
     style: {
-      color: "#ffd24a",
+      color: "var(--amber)",
       fontSize: 9,
       letterSpacing: 3,
-      marginBottom: 2
+      marginBottom: 3
     }
   }, "\u2726 ACHIEVEMENT UNLOCKED"), React.createElement("div", {
     style: {
-      color: "#a8cca8",
-      fontSize: 13,
-      letterSpacing: 0.5
+      color: "var(--text)",
+      fontSize: 13
     }
   }, t.name)))), showTrophies && React.createElement(TrophyCase, {
     unlocked: unlockedRef.current,
@@ -6414,15 +6737,7 @@ function App() {
       setShowTrophies(false);
       setTimeout(() => inputRef.current?.focus(), 30);
     }
-  }), React.createElement("style", null, `
-        *{box-sizing:border-box;}
-        ::-webkit-scrollbar{width:4px;height:4px;}
-        ::-webkit-scrollbar-track{background:#050805;}
-        ::-webkit-scrollbar-thumb{background:#1a3a1a;}
-        input::placeholder{color:#1a4d1a;}
-        button:disabled{opacity:0.4;cursor:not-allowed;}
-        @keyframes toastIn{from{opacity:0;transform:translateX(24px);}to{opacity:1;transform:none;}}
-      `));
+  }));
 }
 const __root = ReactDOM.createRoot(document.getElementById('root'));
 __root.render(React.createElement(App));
